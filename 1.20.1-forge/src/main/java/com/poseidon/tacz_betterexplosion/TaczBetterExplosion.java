@@ -22,6 +22,7 @@ public class TaczBetterExplosion {
         context.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(BlockPass.class);
         ModParticles.REGISTER.register(context.getModEventBus());
+        ModSounds.REGISTER.register(context.getModEventBus());
         context.getModEventBus().addListener(TaczBetterExplosion::onCommonSetup);
     }
 
