@@ -63,6 +63,11 @@ public abstract class FxParticle extends TextureSheetParticle {
     /** Half-extent in blocks before the {@link #MAX_RENDER_SIZE} cap, for the life fraction {@code t}. */
     protected abstract float sizeAt(float t);
 
+    /** Per-class cap on the rendered half-extent in blocks; subclasses may raise it. */
+    protected float maxRenderedSize() {
+        return MAX_RENDER_SIZE;
+    }
+
     /** Sets {@code rCol, gCol, bCol} and {@code alpha} (before the camera fade) for the life fraction {@code t}. */
     protected abstract void applyLook(float t);
 
@@ -88,7 +93,7 @@ public abstract class FxParticle extends TextureSheetParticle {
         double wy = Mth.lerp((double) partialTicks, this.yo, this.y);
         double wz = Mth.lerp((double) partialTicks, this.zo, this.z);
         float t = lifeFraction(partialTicks);
-        this.renderSize = Math.min(sizeAt(t), MAX_RENDER_SIZE);
+        this.renderSize = Math.min(sizeAt(t), maxRenderedSize());
         applyLook(t);
         float fade = cameraFade(camera, wx, wy, wz, this.renderSize);
         this.alpha *= fade;

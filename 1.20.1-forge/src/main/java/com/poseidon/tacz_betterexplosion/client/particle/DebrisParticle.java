@@ -116,6 +116,12 @@ public final class DebrisParticle extends TerrainParticle {
         return this.light;
     }
 
+    /** Large debris quads would frustum-pop at the screen edge; same as {@link FxParticle#shouldCull()}. */
+    @Override
+    public boolean shouldCull() {
+        return false;
+    }
+
     @Override
     public void remove() {
         super.remove();

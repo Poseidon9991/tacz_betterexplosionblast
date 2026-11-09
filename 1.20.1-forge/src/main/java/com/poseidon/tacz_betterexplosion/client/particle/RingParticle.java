@@ -36,6 +36,14 @@ public final class RingParticle extends FxParticle {
         return FxRenderTypes.ADDITIVE;
     }
 
+    /**
+     * A single flat, mostly transparent quad; LARGE/HUGE explosions need a ring up to ~18-24 blocks.
+     */
+    @Override
+    protected float maxRenderedSize() {
+        return 24.0F;
+    }
+
     @Override
     protected float sizeAt(float t) {
         return this.quadSize * easeOutCubic(t);
