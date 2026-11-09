@@ -126,9 +126,16 @@ public final class ExplosionVfx {
             spawned += spawnStem(engine, counts.get(FxBudget.Layer.STEM), rand, cx, cy, cz, r, factor, tier);
         }
         if (ground) {
+            int dust = counts.get(FxBudget.Layer.DUST);
+            // Air blasts split the dust budget into a ground shock ring and the scattered cloud;
+            // underwater keeps the whole budget as the silt cloud (no ring).
+            int ringCount = underwater ? 0 : (int) Math.round(dust * 0.7);
             spawned += spawnDust(
-                    engine, counts.get(FxBudget.Layer.DUST), rand, level, cx, cz, groundY, r, factor, groundState,
+                    engine, dust - ringCount, rand, level, cx, cz, groundY, r, factor, groundState,
                     underwater);
+            if (ringCount > 0) {
+                spawned += spawnDustRing(engine, ringCount, rand, level, cx, cz, groundY, r, factor, groundState);
+            }
             spawned += spawnDebris(
                     engine, counts.get(FxBudget.Layer.DEBRIS), rand, cx, cz, groundY, r, groundState);
         }
@@ -195,7 +202,7 @@ public final class ExplosionVfx {
 
     /**
      * Rising smoke column. For LARGE and HUGE explosions the top third of the puffs spawns wider as the
-     * mushroom cap ({@code 0.8R} xz spread, {@code 0.5R} up, 1.4x the scale).
+     * mushroom cap ({@code 0.8R} xz spread, {@code 0.5R} up, 1.68x the scale).
      */
     private static int spawnStem(
             ParticleEngine engine,
@@ -213,12 +220,12 @@ public final class ExplosionVfx {
                 x = cx + (rand.nextDouble() - 0.5) * 0.8 * r;
                 y = cy + 0.5 * r;
                 z = cz + (rand.nextDouble() - 0.5) * 0.8 * r;
-                scale = r * (0.6F + rand.nextFloat() * 0.5F) * factor * 1.4F;
+                scale = r * (0.6F + rand.nextFloat() * 0.5F) * factor * 1.4F * 1.2F;
             } else {
                 x = cx + (rand.nextDouble() - 0.5) * 0.3 * r;
                 y = cy + rand.nextDouble() * 0.3 * r;
                 z = cz + (rand.nextDouble() - 0.5) * 0.3 * r;
-                scale = r * (0.7F + rand.nextFloat() * 0.6F) * factor;
+                scale = r * (0.9F + rand.nextFloat() * 0.7F) * factor;
             }
             spawned += spawn(
                     engine, ModParticles.SMOKE_PUFF.get(), x, y, z,
@@ -259,7 +266,7 @@ public final class ExplosionVfx {
      * Scattered low blast cloud: smoke puffs spread uniformly over a disc of radius {@code 1.1R} around the
      * centre, creeping outward just above the ground, tinted with the ground block's map colour. Underwater it
      * is silt: tint pulled 50 percent toward grey (fallback 0.7, 0.7, 0.65), half the upward speed, lifetime
-     * 25..39 ticks.
+     * 25..39 ticks. Air blasts give this layer only the non-ring share of the DUST budget.
      */
     private static int spawnDust(
             ParticleEngine engine,
@@ -282,6 +289,39 @@ public final class ExplosionVfx {
                     (underwater ? 25 : 20) + rand.nextInt(15));
             if (p instanceof PuffParticle puff) {
                 puff.setTint(tint[0], tint[1], tint[2]);
+            }
+            spawned += p == null ? 0 : 1;
+        }
+        return spawned;
+    }
+
+    /**
+     * Ground dust shock ring (air blasts only): {@code n} puffs evenly spaced on a circle of radius
+     * {@code 0.25R} around the centre, racing outward along the floor. Angles jitter by at most ±0.3 of a
+     * slot and speeds by ±10 percent so the ring stays readable. Same ground tint as the cloud; each puff
+     * runs in {@code PuffParticle}'s ground-dust mode. Lifetime 24..39 ticks.
+     */
+    private static int spawnDustRing(
+            ParticleEngine engine,
+            int n, RandomSource rand, ClientLevel level, double cx, double cz, double groundY, float r,
+            float factor, BlockState groundState) {
+        float[] tint = dustTint(level, BlockPos.containing(cx, groundY - 0.01, cz), groundState, false);
+        int spawned = 0;
+        for (int i = 0; i < n; i++) {
+            double angle = Mth.TWO_PI * (i + (rand.nextDouble() - 0.5) * 0.6) / n;
+            double cos = Math.cos(angle);
+            double sin = Math.sin(angle);
+            double startRadius = 0.25 * r;
+            double speed = 0.10 * r * (0.9 + rand.nextDouble() * 0.2);
+            Particle p = create(
+                    engine, ModParticles.SMOKE_PUFF.get(),
+                    cx + cos * startRadius, groundY + 0.15 + rand.nextDouble() * 0.2, cz + sin * startRadius,
+                    cos * speed, 0.004 + rand.nextDouble() * 0.004, sin * speed,
+                    r * (0.32F + rand.nextFloat() * 0.2F) * factor,
+                    24 + rand.nextInt(16));
+            if (p instanceof PuffParticle puff) {
+                puff.setTint(tint[0], tint[1], tint[2]);
+                puff.setGroundDust();
             }
             spawned += p == null ? 0 : 1;
         }
@@ -361,7 +401,7 @@ public final class ExplosionVfx {
     /**
      * Fast shrapnel streaks flying out of the centre (jitter {@code 0.1R} per axis). With ground the direction
      * is biased to the upper hemisphere ({@code y = |y| * 0.8 + 0.15}, renormalised); an air burst uses the
-     * full sphere. Speed {@code (0.9 + rand * 1.3) * (0.7 + 0.06R)} blocks per tick.
+     * full sphere. Speed {@code (1.0 + rand * 1.5) * (0.7 + 0.06R)} blocks per tick.
      */
     private static int spawnShrapnel(
             ParticleEngine engine,
@@ -376,14 +416,14 @@ public final class ExplosionVfx {
                 dir[1] /= len;
                 dir[2] /= len;
             }
-            double speed = (0.9 + rand.nextDouble() * 1.3) * (0.7 + 0.06 * r);
+            double speed = (1.0 + rand.nextDouble() * 1.5) * (0.7 + 0.06 * r);
             spawned += spawn(
                     engine, ModParticles.SHRAPNEL.get(),
                     cx + (rand.nextDouble() - 0.5) * 0.2 * r,
                     cy + (rand.nextDouble() - 0.5) * 0.2 * r,
                     cz + (rand.nextDouble() - 0.5) * 0.2 * r,
                     dir[0] * speed, dir[1] * speed, dir[2] * speed,
-                    0.8F + rand.nextFloat() * 0.6F,
+                    1.0F + rand.nextFloat() * 0.9F,
                     0);
         }
         return spawned;

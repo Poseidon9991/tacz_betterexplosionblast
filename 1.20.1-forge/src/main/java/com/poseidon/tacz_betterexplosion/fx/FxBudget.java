@@ -35,7 +35,7 @@ public final class FxBudget {
     private static final Layer[] SHARED_LAYERS = {
         Layer.FIREBALL, Layer.STEM, Layer.DUST, Layer.DEBRIS, Layer.SPARKS, Layer.SHRAPNEL
     };
-    private static final int[] SHARE_PERCENT = {22, 34, 10, 10, 8, 16};
+    private static final int[] SHARE_PERCENT = {16, 36, 16, 6, 6, 20};
     /** Order in which the rounding leftover is handed out, one unit each. */
     private static final Layer[] LEFTOVER_ORDER = {
         Layer.STEM, Layer.FIREBALL, Layer.SHRAPNEL, Layer.DEBRIS, Layer.SPARKS, Layer.DUST
@@ -112,7 +112,7 @@ public final class FxBudget {
 
     /**
      * Splits a budget over all layers. FLASH is fixed at 2, clamped to the budget; the remainder is shared
-     * {@code 22/34/10/10/8/16} percent over FIREBALL, STEM, DUST, DEBRIS, SPARKS, SHRAPNEL (integer floor) and
+     * {@code 16/36/16/6/6/20} percent over FIREBALL, STEM, DUST, DEBRIS, SPARKS, SHRAPNEL (integer floor) and
      * the rounding leftover (at most 5) is handed out one unit at a time in the order STEM, FIREBALL, SHRAPNEL,
      * DEBRIS, SPARKS, DUST. The layers always sum to {@code budget} (all zero when it is not positive) and the
      * map holds every layer.

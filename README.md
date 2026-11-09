@@ -2,7 +2,7 @@
 
 Forge 1.20.1 addon for Timeless and Classics Zero (TaCZ) that improves explosions caused by TaCZ guns and projectiles.
 
-v0.3.0: cover-aware explosion damage plus the full client effect — layered particles, distance-banded sound, screen shake and flash, all with performance throttles. 0.3.0 adds an underwater effect variant, TaCZ Tweaks player-damage compatibility and a round of damage-model hardening.
+v0.3.0: cover-aware explosion damage plus the full client effect — layered particles, distance-banded sound, screen shake and flash, all with performance throttles. 0.3.0 adds an underwater effect variant, TaCZ Tweaks player-damage compatibility and a round of damage-model hardening. 0.3.2 is a visual polish round: a dust shock ring racing outward along the ground, bigger and more numerous shrapnel streaks, and denser billowing smoke.
 
 ## How it works
 
@@ -13,7 +13,7 @@ TaCZ creates every explosive-round explosion through `ExplodeUtil.createExplosio
 3. The blocks are destroyed.
 4. A small packet tells players near the blast to play the effect.
 
-On the client the packet drives a layered effect built from the tier's particle budget: flash (core plus halo, about 6 ticks), fireball, long-lived billowing smoke stem, a scattered low dust cloud tinted by the ground block, debris, sparks and fast shrapnel streaks. The sound is layered too — close, mid and far bands picked by distance and delayed by distance to simulate travel time. Screen shake scales with tier and proximity, and a longer white flash fires when the blast is close.
+On the client the packet drives a layered effect built from the tier's particle budget: flash (core plus halo, about 6 ticks), fireball, long-lived billowing smoke stem, a dust shock ring racing outward along the ground plus a scattered low dust cloud tinted by the ground block, debris, sparks and fast shrapnel streaks. The sound is layered too — close, mid and far bands picked by distance and delayed by distance to simulate travel time. Screen shake scales with tier and proximity, and a longer white flash fires when the blast is close.
 
 ### Underwater variant
 
@@ -71,11 +71,11 @@ Explosions are classed by radius into tiers, each with a HIGH-quality particle b
 
 | Tier | Radius < | Budget (HIGH) | Packet range | Particle range |
 |---|---|---|---|---|
-| MINI | 2 | 12 | 64 | 48 |
-| SMALL | 3.5 | 28 | 96 | 64 |
-| MEDIUM | 6 | 55 | 160 | 96 |
-| LARGE | 10 | 90 | 224 | 144 |
-| HUGE | ∞ | 150 | 256 | 192 |
+| MINI | 2 | 14 | 64 | 48 |
+| SMALL | 3.5 | 34 | 96 | 64 |
+| MEDIUM | 6 | 66 | 160 | 96 |
+| LARGE | 10 | 108 | 224 | 144 |
+| HUGE | ∞ | 180 | 256 | 192 |
 
 ## Test command
 

@@ -37,7 +37,7 @@ public abstract class FxParticle extends TextureSheetParticle {
     /** Packed lightmap coordinates for block light 15 and sky light 15. */
     static final int FULL_BRIGHT = 0xF000F0;
     /** Upper bound of the rendered half-extent in blocks. */
-    static final float MAX_RENDER_SIZE = 6.0F;
+    static final float MAX_RENDER_SIZE = 7.0F;
     /** Fade stops emitting vertices at or below this factor. */
     static final float MIN_FADE = 0.01F;
     /** No vertices are emitted at or below this final alpha. */

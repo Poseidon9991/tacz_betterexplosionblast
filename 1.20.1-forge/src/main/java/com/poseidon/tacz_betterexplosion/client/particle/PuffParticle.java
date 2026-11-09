@@ -20,12 +20,17 @@ import net.minecraft.util.Mth;
  * <p>SMOKE: translucent sheet, lifetime 70..140, light read once at spawn (the only world access). Colour
  * piecewise linear from warm ember-brown (0.55, 0.38, 0.25) at t=0 to grey (0.36, 0.35, 0.34) at t=0.2,
  * (0.16, 0.16, 0.16) at t=0.65 and (0.09, 0.09, 0.09) at t=1, times a per-particle brightness in
- * [0.85, 1.15]. Alpha ramps 0 to 0.8 over t in [0, 0.06], holds, then falls linearly to 0 over t in
- * [0.55, 1]. Size {@code quadSize * (0.5 + 0.75 * easeOutQuad(t))} (billowing growth). The quad spins slowly
+ * [0.85, 1.15]. Alpha ramps 0 to 0.95 over t in [0, 0.05], holds until t=0.65, then falls linearly to 0
+ * over t in [0.65, 1]. Size {@code quadSize * (0.6 + 0.8 * easeOutQuad(t))} (billowing growth). The quad spins slowly
  * ({@code roll} changes by up to 0.04 rad per tick, random sign and magnitude, from a random start angle).
  * Velocity {@code * 0.965} per tick, {@code yd >= 0.010} until t=0.85, plus turbulence
  * {@code 0.006 * sin(0.30 * age + phase) + 0.003 * sin(0.77 * age + phase2)} on {@code xd} and the cosine of
  * the same angles on {@code zd}.
+ *
+ * <p>{@link #setGroundDust} switches a SMOKE puff into ground-dust mode (the shock-ring puffs): horizontal
+ * damping 0.93 per tick, constant {@code yd = 0.004} (no rise floor, no turbulence), size
+ * {@code quadSize * (0.7 + 0.8 * easeOutQuad(t))} (low, flat, wide growth) and alpha ramping 0 to 0.8 over
+ * t in [0, 0.08], holding until t=0.5, then linear to 0. Colour and spin are unchanged.
  */
 public final class PuffParticle extends FxParticle {
 
@@ -47,10 +52,15 @@ public final class PuffParticle extends FxParticle {
 
     private static final float SMOKE_GREY_AT = 0.2F;
     private static final float SMOKE_DARK_AT = 0.65F;
-    private static final float SMOKE_FADE_IN_END = 0.06F;
-    private static final float SMOKE_FADE_OUT_START = 0.55F;
-    private static final float SMOKE_MAX_ALPHA = 0.8F;
+    private static final float SMOKE_FADE_IN_END = 0.05F;
+    private static final float SMOKE_FADE_OUT_START = 0.65F;
+    private static final float SMOKE_MAX_ALPHA = 0.95F;
     private static final float SMOKE_DAMPING = 0.965F;
+    private static final float GROUND_DUST_FADE_IN_END = 0.08F;
+    private static final float GROUND_DUST_FADE_OUT_START = 0.5F;
+    private static final float GROUND_DUST_MAX_ALPHA = 0.8F;
+    private static final float GROUND_DUST_DAMPING = 0.93F;
+    private static final float GROUND_DUST_RISE = 0.004F;
     private static final float SMOKE_MIN_RISE = 0.010F;
     private static final float SMOKE_RISE_UNTIL = 0.85F;
     private static final float SMOKE_BRIGHTNESS_MIN = 0.85F;
@@ -74,6 +84,7 @@ public final class PuffParticle extends FxParticle {
     private float tintR;
     private float tintG;
     private float tintB;
+    private boolean groundDust;
 
     PuffParticle(
             ClientLevel level,
@@ -118,6 +129,11 @@ public final class PuffParticle extends FxParticle {
         this.tintB = b;
     }
 
+    /** Ground-dust mode for the shock-ring puffs; must be set before the first tick. */
+    public void setGroundDust() {
+        this.groundDust = true;
+    }
+
     @Override
     public ParticleRenderType getRenderType() {
         return this.variant == Variant.FIRE ? FxRenderTypes.ADDITIVE : ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
@@ -133,7 +149,10 @@ public final class PuffParticle extends FxParticle {
         if (this.variant == Variant.FIRE) {
             return this.quadSize * (0.55F + 0.45F * easeOutCubic(t));
         }
-        return this.quadSize * (0.5F + 0.75F * easeOutQuad(t));
+        if (this.groundDust) {
+            return this.quadSize * (0.7F + 0.8F * easeOutQuad(t));
+        }
+        return this.quadSize * (0.6F + 0.8F * easeOutQuad(t));
     }
 
     @Override
@@ -158,7 +177,16 @@ public final class PuffParticle extends FxParticle {
             this.rCol *= this.brightness;
             this.gCol *= this.brightness;
             this.bCol *= this.brightness;
-            if (t < SMOKE_FADE_IN_END) {
+            if (this.groundDust) {
+                if (t < GROUND_DUST_FADE_IN_END) {
+                    this.alpha = GROUND_DUST_MAX_ALPHA * t / GROUND_DUST_FADE_IN_END;
+                } else if (t < GROUND_DUST_FADE_OUT_START) {
+                    this.alpha = GROUND_DUST_MAX_ALPHA;
+                } else {
+                    this.alpha = GROUND_DUST_MAX_ALPHA
+                            * (1.0F - (t - GROUND_DUST_FADE_OUT_START) / (1.0F - GROUND_DUST_FADE_OUT_START));
+                }
+            } else if (t < SMOKE_FADE_IN_END) {
                 this.alpha = SMOKE_MAX_ALPHA * t / SMOKE_FADE_IN_END;
             } else if (t < SMOKE_FADE_OUT_START) {
                 this.alpha = SMOKE_MAX_ALPHA;
@@ -181,13 +209,19 @@ public final class PuffParticle extends FxParticle {
             this.zd *= FIRE_DAMPING;
             return;
         }
-        float swirl = SMOKE_SWIRL_FREQUENCY * this.age + this.phase;
-        float flutter = SMOKE_FLUTTER_FREQUENCY * this.age + this.phase2;
-        this.xd = this.xd * SMOKE_DAMPING + SMOKE_SWIRL * Mth.sin(swirl) + SMOKE_FLUTTER * Mth.sin(flutter);
-        this.yd *= SMOKE_DAMPING;
-        this.zd = this.zd * SMOKE_DAMPING + SMOKE_SWIRL * Mth.cos(swirl) + SMOKE_FLUTTER * Mth.cos(flutter);
-        if (this.age < SMOKE_RISE_UNTIL * this.lifetime) {
-            this.yd = Math.max(this.yd, SMOKE_MIN_RISE);
+        if (this.groundDust) {
+            this.xd *= GROUND_DUST_DAMPING;
+            this.yd = GROUND_DUST_RISE;
+            this.zd *= GROUND_DUST_DAMPING;
+        } else {
+            float swirl = SMOKE_SWIRL_FREQUENCY * this.age + this.phase;
+            float flutter = SMOKE_FLUTTER_FREQUENCY * this.age + this.phase2;
+            this.xd = this.xd * SMOKE_DAMPING + SMOKE_SWIRL * Mth.sin(swirl) + SMOKE_FLUTTER * Mth.sin(flutter);
+            this.yd *= SMOKE_DAMPING;
+            this.zd = this.zd * SMOKE_DAMPING + SMOKE_SWIRL * Mth.cos(swirl) + SMOKE_FLUTTER * Mth.cos(flutter);
+            if (this.age < SMOKE_RISE_UNTIL * this.lifetime) {
+                this.yd = Math.max(this.yd, SMOKE_MIN_RISE);
+            }
         }
         this.oRoll = this.roll;
         this.roll += this.spin;

@@ -42,16 +42,16 @@ class FxBudgetTest {
 
     @Test
     void budgetHighMediumIsTableValue() {
-        assertEquals(55, FxBudget.budget(ExplosionTier.MEDIUM, Quality.HIGH, VanillaParticles.ALL, 1, 1, 1, 0, 700));
-        assertEquals(90, FxBudget.budget(ExplosionTier.LARGE, Quality.HIGH, VanillaParticles.ALL, 1, 1, 1, 0, 700));
-        assertEquals(150, FxBudget.budget(ExplosionTier.HUGE, Quality.HIGH, VanillaParticles.ALL, 1, 1, 1, 0, 700));
+        assertEquals(66, FxBudget.budget(ExplosionTier.MEDIUM, Quality.HIGH, VanillaParticles.ALL, 1, 1, 1, 0, 700));
+        assertEquals(108, FxBudget.budget(ExplosionTier.LARGE, Quality.HIGH, VanillaParticles.ALL, 1, 1, 1, 0, 700));
+        assertEquals(180, FxBudget.budget(ExplosionTier.HUGE, Quality.HIGH, VanillaParticles.ALL, 1, 1, 1, 0, 700));
     }
 
     @Test
     void budgetScalesWithFactors() {
-        assertEquals(17, FxBudget.budget(ExplosionTier.MEDIUM, Quality.LOW, VanillaParticles.ALL, 1, 1, 1, 0, 700));
+        assertEquals(20, FxBudget.budget(ExplosionTier.MEDIUM, Quality.LOW, VanillaParticles.ALL, 1, 1, 1, 0, 700));
         assertEquals(
-                28, FxBudget.budget(ExplosionTier.MEDIUM, Quality.HIGH, VanillaParticles.DECREASED, 1, 1, 1, 0, 700));
+                33, FxBudget.budget(ExplosionTier.MEDIUM, Quality.HIGH, VanillaParticles.DECREASED, 1, 1, 1, 0, 700));
         assertEquals(0, FxBudget.budget(ExplosionTier.MEDIUM, Quality.HIGH, VanillaParticles.ALL, 1, 1, 0, 0, 700));
         assertEquals(100, FxBudget.budget(ExplosionTier.HUGE, Quality.HIGH, VanillaParticles.ALL, 1, 1, 1, 0, 100));
     }
@@ -112,22 +112,21 @@ class FxBudgetTest {
 
     @Test
     void splitMediumShape() {
-        // remainder 53: floors 11/18/5/5/4/8 (sum 51), leftover 2 to STEM then FIREBALL
-        assertShape(FxBudget.split(55), 2, 12, 19, 5, 5, 4, 8);
+        // remainder 64: floors 10/23/10/3/3/12 (sum 61), leftover 3 to STEM, FIREBALL, SHRAPNEL
+        assertShape(FxBudget.split(66), 2, 11, 24, 10, 3, 3, 13);
     }
 
     @Test
     void splitLeftoverOrderIsStemFireballShrapnelDebrisSparksDust() {
-        // remainder 7: floors FIREBALL 1, STEM 2, SHRAPNEL 1 (sum 4), leftover 3 to STEM, FIREBALL, SHRAPNEL
-        assertShape(FxBudget.split(9), 2, 2, 3, 0, 0, 0, 2);
-        // remainder 5 -> floors FIREBALL 1, STEM 1, DUST 0, DEBRIS 0, SPARKS 0, SHRAPNEL 0 (sum 2), leftover 3
-        // to STEM, FIREBALL, SHRAPNEL
-        assertShape(FxBudget.split(7), 2, 2, 2, 0, 0, 0, 1);
-        // remainder 18 (budget 20): floors 3/6/1/1/1/2 (sum 14), leftover 4 to STEM, FIREBALL, SHRAPNEL, DEBRIS
-        assertShape(FxBudget.split(20), 2, 4, 7, 1, 2, 1, 3);
-        // remainder 49 (budget 51): floors 10/16/4/4/3/7 (sum 44), leftover 5 to STEM, FIREBALL, SHRAPNEL,
+        // remainder 7: floors FIREBALL 1, STEM 2, DUST 1, SHRAPNEL 1 (sum 5), leftover 2 to STEM, FIREBALL
+        assertShape(FxBudget.split(9), 2, 2, 3, 1, 0, 0, 1);
+        // remainder 5 -> floors STEM 1, SHRAPNEL 1 (sum 2), leftover 3 to STEM, FIREBALL, SHRAPNEL
+        assertShape(FxBudget.split(7), 2, 1, 2, 0, 0, 0, 2);
+        // remainder 18 (budget 20): floors 2/6/2/1/1/3 (sum 15), leftover 3 to STEM, FIREBALL, SHRAPNEL
+        assertShape(FxBudget.split(20), 2, 3, 7, 2, 1, 1, 4);
+        // remainder 49 (budget 51): floors 7/17/7/2/2/9 (sum 44), leftover 5 to STEM, FIREBALL, SHRAPNEL,
         // DEBRIS, SPARKS (DUST gets none)
-        assertShape(FxBudget.split(51), 2, 11, 17, 4, 5, 4, 8);
+        assertShape(FxBudget.split(51), 2, 8, 18, 7, 3, 3, 10);
     }
 
     @Test

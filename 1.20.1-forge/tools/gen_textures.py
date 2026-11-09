@@ -13,6 +13,7 @@ Usage: python tools/gen_textures.py
 
 import hashlib
 import math
+import random
 from pathlib import Path
 
 from PIL import Image
@@ -126,29 +127,91 @@ def fire_puff():
     return build(size, size, pixel)
 
 
-def smoke_puff():
-    """Light grey, lobed noise variation, lumpier alpha than the fire puff, max alpha 0.9."""
-    size = 64
-    raw = []
-    for y in range(size):
-        for x in range(size):
-            u, v = unit_coords(x, y, size, size)
-            r = math.hypot(u, v)
-            lobes = fbm(u * 2.0 + 5.0, v * 2.0 + 5.0, 21, 3)
-            detail = fbm(u * 5.0 + 20.0, v * 5.0 + 20.0, 22, 2)
-            ragged = r + (lobes - 0.5) * 0.70
-            radial = 1.0 - smoothstep(0.10, 0.90, ragged)
-            alpha = radial * (0.45 + 0.55 * detail)
-            lum = 0.75 + 0.25 * (0.6 * lobes + 0.4 * detail)
-            raw.append((lum, alpha * edge_window(x, y, size, size, 3)))
-    peak = max(a for _, a in raw)
-    scale = 0.9 / peak if peak > 0.0 else 0.0
+# --------------------------------------------------------------------------------------------------
+# Volumetric smoke (cauliflower billows)
+# --------------------------------------------------------------------------------------------------
+
+SMOKE_SIZE = 128
+SMOKE_BORDER = 6
+
+
+def smoke_lobes(seed, count, spread, radius_min, radius_max, tall, central_radius):
+    """Cauliflower lobe layout: `count` overlapping discs of varied radius biased toward the
+    centre (deterministic per seed), plus one fat central lobe so the sprite centre is opaque.
+    `tall` stacks the lobes vertically for the plume variant."""
+    rng = random.Random(seed)
+    lobes = []
+    for _ in range(count):
+        angle = rng.uniform(0.0, math.tau)
+        distance = spread * (rng.random() ** 1.7)
+        lx = math.cos(angle) * distance
+        ly = math.sin(angle) * distance
+        if tall:
+            lx *= 0.55
+            ly *= 1.45
+        lobes.append((lx, ly, rng.uniform(radius_min, radius_max), rng.uniform(0.80, 1.18)))
+    lobes.append((0.0, 0.0, central_radius, 1.05))
+    return lobes
+
+
+def smoke_cauli(seed, count, spread, radius_min, radius_max, ragged, wispy, tall, central_radius):
+    """128x128 volumetric smoke: a union of disc lobes whose alpha is ~1.0 across the inner
+    ~70 percent of each lobe and falls to 0 only in the outer ~30 percent with a small noisy
+    edge. Luminance is baked volumetric shading: lit upper-left rim, dark lower-right core and
+    gaps between lobes, plus subtle ambient-occlusion darkening where lobes overlap."""
+    size = SMOKE_SIZE
+    lobes = smoke_lobes(seed, count, spread, radius_min, radius_max, tall, central_radius)
+    edge_seed = seed + 977
 
     def pixel(x, y):
-        lum, alpha = raw[y * size + x]
-        return lum, alpha * scale
+        if min(x, size - 1 - x, y, size - 1 - y) < SMOKE_BORDER:
+            return 0.75, 0.0
+        u, v = unit_coords(x, y, size, size)
+        n = fbm(u * 5.0 + 31.0, v * 5.0 - 17.0, edge_seed, 3)
+        wisp = fbm(u * 9.0 - 11.0, v * 9.0 + 47.0, edge_seed + 5, 2)
+        alpha = 0.0
+        cover = 0
+        shade = 1.0
+        for (lx, ly, lr, lshade) in lobes:
+            d = math.hypot(u - lx, v - ly) / lr
+            edge = 1.0 + (n - 0.5) * ragged
+            a = 1.0 - smoothstep(0.70, edge, d)
+            if a <= 0.0:
+                continue
+            cover += 1
+            if a > alpha:
+                alpha = a
+                shade = lshade
+        if alpha <= 0.0:
+            return 0.75, 0.0
+        if wispy:
+            alpha *= 0.92 + 0.08 * wisp
+        light = clamp01(0.72 - 0.55 * (u + v))
+        ao = 1.0 - 0.07 * min(cover - 1, 3) - 0.30 * max(0.0, 1.0 - alpha)
+        lum = clamp01(0.19 + 0.82 * light * shade * ao)
+        return lum, alpha
 
     return build(size, size, pixel)
+
+
+def smoke_puff():
+    """Baseline billow: 12 lobes, medium spread and contrast."""
+    return smoke_cauli(101, 13, 0.55, 0.34, 0.52, 0.30, False, False, 0.58)
+
+
+def smoke_puff_b():
+    """Wispy variant: fewer, smaller, ragged lobes with a noisy alpha veil (core stays >= 0.9)."""
+    return smoke_cauli(202, 12, 0.56, 0.32, 0.50, 0.50, True, False, 0.55)
+
+
+def smoke_puff_c():
+    """Densest variant: most lobes, largest radii, tightest edge."""
+    return smoke_cauli(303, 14, 0.56, 0.34, 0.54, 0.22, False, False, 0.60)
+
+
+def smoke_puff_d():
+    """Tall plume variant: lobes stacked slightly vertically."""
+    return smoke_cauli(404, 14, 0.56, 0.32, 0.52, 0.30, False, True, 0.58)
 
 
 def flash():
@@ -186,49 +249,6 @@ def normalised(size, raw, peak_alpha):
     peak = max(a for _, a in raw)
     scale = peak_alpha / peak if peak > 0.0 else 0.0
     return build(size, size, lambda x, y: (raw[y * size + x][0], raw[y * size + x][1] * scale))
-
-
-def smoke_puff_b():
-    """Wispy smoke: low density, ragged lobes, warped detail with holes, max alpha 0.7."""
-    size = 64
-    raw = []
-    for y in range(size):
-        for x in range(size):
-            u, v = unit_coords(x, y, size, size)
-            wu, wv = warp(u, v, 41, 0.5, 1.6)
-            r = math.hypot(u, v)
-            lobes = fbm(wu * 2.6 + 15.0, wv * 2.6 + 15.0, 42, 3)
-            detail = fbm(wu * 6.0 + 40.0, wv * 6.0 + 40.0, 43, 3)
-            ragged = r + (lobes - 0.5) * 0.75
-            radial = 1.0 - smoothstep(0.0, 0.95, ragged)
-            wisp = 0.30 + 0.70 * smoothstep(0.32, 0.72, detail)
-            alpha = (radial ** 1.3) * wisp * soft_disc(r, 0.62, 1.0) * edge_window(x, y, size, size, 3)
-            lum = 0.80 + 0.20 * (0.5 * lobes + 0.5 * detail)
-            raw.append((lum, alpha))
-    return normalised(size, raw, 0.7)
-
-
-def smoke_puff_c():
-    """Dense billowy smoke: ridged billows; darker-looking lumps are encoded as lower luminance 0.55..0.85."""
-    size = 64
-    raw = []
-    for y in range(size):
-        for x in range(size):
-            u, v = unit_coords(x, y, size, size)
-            wu, wv = warp(u, v, 51, 0.25, 1.8)
-            r = math.hypot(u, v)
-            lobes = fbm(wu * 2.2 + 25.0, wv * 2.2 + 25.0, 52, 3)
-            billow = abs(2.0 * fbm(wu * 5.0 + 60.0, wv * 5.0 + 60.0, 53, 3) - 1.0)
-            fine = fbm(u * 8.0 + 80.0, v * 8.0 + 80.0, 54, 2)
-            ragged = r + (lobes - 0.5) * 0.40
-            dense = 1.0 - smoothstep(0.30, 0.92, ragged)
-            alpha = min(1.0, dense * 1.15) * (0.82 + 0.18 * fine) * soft_disc(r, 0.70, 1.0)
-            alpha *= edge_window(x, y, size, size, 3)
-            light = 0.5 * (1.0 - v) * 0.5 + 0.5 * (1.0 - u) * 0.25
-            lump = clamp01(0.85 * smoothstep(0.08, 0.55, billow) + 0.30 * light)
-            lum = 0.55 + 0.30 * lump
-            raw.append((lum, alpha))
-    return normalised(size, raw, 0.95)
 
 
 def fire_puff_b():
@@ -297,9 +317,10 @@ def shrapnel():
 TEXTURES = {
     "fire_puff": (fire_puff, (64, 64)),
     "fire_puff_b": (fire_puff_b, (64, 64)),
-    "smoke_puff": (smoke_puff, (64, 64)),
-    "smoke_puff_b": (smoke_puff_b, (64, 64)),
-    "smoke_puff_c": (smoke_puff_c, (64, 64)),
+    "smoke_puff": (smoke_puff, (SMOKE_SIZE, SMOKE_SIZE)),
+    "smoke_puff_b": (smoke_puff_b, (SMOKE_SIZE, SMOKE_SIZE)),
+    "smoke_puff_c": (smoke_puff_c, (SMOKE_SIZE, SMOKE_SIZE)),
+    "smoke_puff_d": (smoke_puff_d, (SMOKE_SIZE, SMOKE_SIZE)),
     "flash": (flash, (64, 64)),
     "spark": (spark, (16, 64)),
     "shrapnel": (shrapnel, (16, 64)),
@@ -330,12 +351,41 @@ def assert_streak(name, image):
         assert all(a >= 0.3 for a in head_row[3:13]), name + ": halo below 0.3"
 
 
+def assert_smoke(name, image):
+    """Volumetric-smoke rules: opaque centre, dense inner half, shaded luminance range."""
+    size = image.size[0]
+    alpha = image.getchannel("A")
+    lum = image.getchannel("R")
+    centre = alpha.getpixel((size // 2, size // 2)) / 255.0
+    assert centre >= 0.95, name + ": centre alpha {:.2f} below 0.95".format(centre)
+    half = size // 4
+    total = 0
+    alpha_sum = 0.0
+    min_lum = 1.0
+    max_lum = 0.0
+    for y in range(half, size - half):
+        for x in range(half, size - half):
+            a = alpha.getpixel((x, y)) / 255.0
+            total += 1
+            alpha_sum += a
+            if a > 0.05:
+                l = lum.getpixel((x, y)) / 255.0
+                min_lum = min(min_lum, l)
+                max_lum = max(max_lum, l)
+    mean_alpha = alpha_sum / total
+    assert mean_alpha >= 0.85, name + ": inner mean alpha {:.3f} below 0.85".format(mean_alpha)
+    assert min_lum <= 0.36 and max_lum >= 0.93, (
+        name + ": luminance range {:.3f}..{:.3f} does not span 0.35..0.95".format(min_lum, max_lum))
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for name, (factory, size) in TEXTURES.items():
         image = factory()
         assert_valid(name, image, size)
         assert_streak(name, image)
+        if name.startswith("smoke_puff"):
+            assert_smoke(name, image)
         path = OUT_DIR / (name + ".png")
         image.save(path, format="PNG", optimize=False, compress_level=9)
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
