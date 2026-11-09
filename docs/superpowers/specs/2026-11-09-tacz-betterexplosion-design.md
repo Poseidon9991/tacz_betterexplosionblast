@@ -209,7 +209,11 @@ Client (`tacz_betterexplosion-client.toml`): `quality` (HIGH), `maxLiveParticles
   both the block pass and the damage pass.
 - TACZ Attributes: no work needed, values arrive already modified.
 - TaCZ Tweaks: explosion player-damage modifier not applied (known gap, milestone 3).
-- Dedicated server: client classes are never loaded; verified by a headless `runServer` boot in each milestone.
+- Dedicated server: client classes are never loaded. A unit test (`DistSafetyTest`) scans the sources and fails if any
+  `net.minecraft.client`, `com.mojang.blaze3d` or `net.minecraftforge.client` import appears outside the `client`
+  package; the author also boots a real dedicated server with TaCZ and the jar at each milestone gate (the dev
+  environment does not load TaCZ as a mod, so `runServer` cannot prove it).
+- Registries for particle types and sound events are common code, registered on both sides, so registry sync matches.
 
 ## 10. Testing
 
@@ -217,7 +221,7 @@ Unit tests (JUnit 5, no Minecraft bootstrap): `DamageModel` (exactly `D` at `d =
 with distance; 0 at and beyond reach; cover floor; multipliers), tier boundaries, packet encode/decode round trip,
 config defaults.
 
-Build gate: `gradlew build` for every milestone, plus a headless `runServer` boot.
+Build gate: `gradlew build` and `gradlew test` for every milestone, plus the dedicated-server boot in section 9.
 
 In-game checklist (run by the author): launcher at 2, 5 and 8 blocks; a near miss; behind cover; owner self-damage;
 direct hit stacking; with TaCZ Tweaks installed; `/betterexplosion test` budgets from section 7.
