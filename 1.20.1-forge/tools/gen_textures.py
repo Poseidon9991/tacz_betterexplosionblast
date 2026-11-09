@@ -128,90 +128,75 @@ def fire_puff():
 
 
 # --------------------------------------------------------------------------------------------------
-# Volumetric smoke (cauliflower billows)
+# Volumetric smoke (domain-warped fBm billows)
 # --------------------------------------------------------------------------------------------------
 
 SMOKE_SIZE = 128
 SMOKE_BORDER = 6
 
 
-def smoke_lobes(seed, count, spread, radius_min, radius_max, tall, central_radius):
-    """Cauliflower lobe layout: `count` overlapping discs of varied radius biased toward the
-    centre (deterministic per seed), plus one fat central lobe so the sprite centre is opaque.
-    `tall` stacks the lobes vertically for the plume variant."""
-    rng = random.Random(seed)
-    lobes = []
-    for _ in range(count):
-        angle = rng.uniform(0.0, math.tau)
-        distance = spread * (rng.random() ** 1.7)
-        lx = math.cos(angle) * distance
-        ly = math.sin(angle) * distance
-        if tall:
-            lx *= 0.55
-            ly *= 1.45
-        lobes.append((lx, ly, rng.uniform(radius_min, radius_max), rng.uniform(0.80, 1.18)))
-    lobes.append((0.0, 0.0, central_radius, 1.05))
-    return lobes
+def smoke_volumetric(seed, radius_x, radius_y, base_freq, warp_amp, warp_freq, edge_mod,
+                     wispy, tall, lum_lo, lum_hi, ao_depth):
+    """128x128 volumetric smoke from domain-warped fractal noise — no discs, no rim highlights.
 
-
-def smoke_cauli(seed, count, spread, radius_min, radius_max, ragged, wispy, tall, central_radius):
-    """128x128 volumetric smoke: a union of disc lobes whose alpha is ~1.0 across the inner
-    ~70 percent of each lobe and falls to 0 only in the outer ~30 percent with a small noisy
-    edge. Luminance is baked volumetric shading: lit upper-left rim, dark lower-right core and
-    gaps between lobes, plus subtle ambient-occlusion darkening where lobes overlap."""
+    Alpha: an elliptical radial envelope (solid 1.0 core, smoothstep falloff over the outer
+    ~22 percent only) whose edge radius is modulated +/-edge_mod by ridged billow noise, so the
+    silhouette swirls like turbulent smoke. Luminance: gentle directional light (lit upper-left
+    ~0.95 to shaded lower-right ~0.55) times (lum_lo + (lum_hi - lum_lo) * detail) where detail
+    is a second warped fBm, darkened further in the deep valleys of the billow noise (ambient
+    occlusion). `tall` stretches the noise vertically for the plume variant."""
     size = SMOKE_SIZE
-    lobes = smoke_lobes(seed, count, spread, radius_min, radius_max, tall, central_radius)
-    edge_seed = seed + 977
+    billow_seed = seed + 101
+    detail_seed = seed + 307
+    warp_seed = seed + 55
 
     def pixel(x, y):
         if min(x, size - 1 - x, y, size - 1 - y) < SMOKE_BORDER:
             return 0.75, 0.0
-        u, v = unit_coords(x, y, size, size)
-        n = fbm(u * 5.0 + 31.0, v * 5.0 - 17.0, edge_seed, 3)
-        wisp = fbm(u * 9.0 - 11.0, v * 9.0 + 47.0, edge_seed + 5, 2)
-        alpha = 0.0
-        cover = 0
-        shade = 1.0
-        for (lx, ly, lr, lshade) in lobes:
-            d = math.hypot(u - lx, v - ly) / lr
-            edge = 1.0 + (n - 0.5) * ragged
-            a = 1.0 - smoothstep(0.70, edge, d)
-            if a <= 0.0:
-                continue
-            cover += 1
-            if a > alpha:
-                alpha = a
-                shade = lshade
+        u = (x + 0.5) / size - 0.5
+        v = (y + 0.5) / size - 0.5
+        wu = u + warp_amp * (fbm(u * warp_freq + 3.7, v * warp_freq + 9.1, warp_seed, 2) - 0.5) * 2.0
+        wv = v + warp_amp * (fbm(u * warp_freq + 5.3, v * warp_freq + 1.7, warp_seed + 13, 2) - 0.5) * 2.0
+        nv = wv / 1.4 if tall else wv
+        n = fbm(wu * base_freq + 11.0, nv * base_freq - 7.0, billow_seed, 5)
+        billow = 1.0 - abs(2.0 * n - 1.0)
+        t = math.hypot(u / radius_x, v / radius_y) / (1.0 + (billow - 0.5) * 2.0 * edge_mod)
+        alpha = 1.0 - smoothstep(0.78, 1.0, t)
         if alpha <= 0.0:
             return 0.75, 0.0
         if wispy:
-            alpha *= 0.92 + 0.08 * wisp
-        light = clamp01(0.72 - 0.55 * (u + v))
-        ao = 1.0 - 0.07 * min(cover - 1, 3) - 0.30 * max(0.0, 1.0 - alpha)
-        lum = clamp01(0.19 + 0.82 * light * shade * ao)
-        return lum, alpha
+            veil = fbm(wu * base_freq * 2.3 + 40.0, nv * base_freq * 2.3 + 3.0, detail_seed, 3)
+            alpha *= 0.95 + 0.05 * veil
+        detail = fbm(wu * base_freq * 1.9 + 23.0, nv * base_freq * 1.9 - 31.0, detail_seed + 3, 4)
+        detail = clamp01((detail - 0.05) / 0.75)
+        light_t = clamp01((u + v) * 0.55 + 0.5)
+        base = 1.05 - 0.49 * light_t
+        lum = base * (lum_lo + (lum_hi - lum_lo) * detail)
+        valley = clamp01((0.55 - billow) / 0.55)
+        lum *= 1.0 - ao_depth * valley * valley
+        return clamp01(lum), alpha
 
     return build(size, size, pixel)
 
 
 def smoke_puff():
-    """Baseline billow: 12 lobes, medium spread and contrast."""
-    return smoke_cauli(101, 13, 0.55, 0.34, 0.52, 0.30, False, False, 0.58)
+    """Balanced billow: medium warp, +/-22% edge modulation."""
+    return smoke_volumetric(101, 0.46, 0.46, 3.4, 0.10, 2.2, 0.22, False, False, 0.62, 1.00, 0.45)
 
 
 def smoke_puff_b():
-    """Wispy variant: fewer, smaller, ragged lobes with a noisy alpha veil (core stays >= 0.9)."""
-    return smoke_cauli(202, 12, 0.56, 0.32, 0.50, 0.50, True, False, 0.55)
+    """Wispy variant: more warp, lower base frequency, +/-30% edge modulation, alpha veil."""
+    return smoke_volumetric(202, 0.45, 0.45, 2.6, 0.16, 1.8, 0.30, True, False, 0.60, 1.00, 0.45)
 
 
 def smoke_puff_c():
-    """Densest variant: most lobes, largest radii, tightest edge."""
-    return smoke_cauli(303, 14, 0.56, 0.34, 0.54, 0.22, False, False, 0.60)
+    """Densest variant: larger solid core, lowest edge modulation, strongest shading contrast."""
+    return smoke_volumetric(303, 0.48, 0.48, 3.8, 0.08, 2.4, 0.12, False, False, 0.52, 1.00, 0.60)
 
 
 def smoke_puff_d():
-    """Tall plume variant: lobes stacked slightly vertically."""
-    return smoke_cauli(404, 14, 0.56, 0.32, 0.52, 0.30, False, True, 0.58)
+    """Tall plume variant: narrower envelope, noise and envelope stretched vertically."""
+    return smoke_volumetric(404, 0.38, 0.47, 3.2, 0.10, 2.2, 0.22, False, True, 0.62, 1.00, 0.45)
 
 
 def flash():
@@ -352,30 +337,40 @@ def assert_streak(name, image):
 
 
 def assert_smoke(name, image):
-    """Volumetric-smoke rules: opaque centre, dense inner half, shaded luminance range."""
+    """Volumetric-smoke rules: opaque centre, dense inner half, shaded luminance range, no specular."""
     size = image.size[0]
     alpha = image.getchannel("A")
     lum = image.getchannel("R")
     centre = alpha.getpixel((size // 2, size // 2)) / 255.0
     assert centre >= 0.95, name + ": centre alpha {:.2f} below 0.95".format(centre)
+    for cx in (0, size - 1):
+        for cy in (0, size - 1):
+            assert alpha.getpixel((cx, cy)) == 0, name + ": corner not transparent"
     half = size // 4
     total = 0
     alpha_sum = 0.0
     min_lum = 1.0
     max_lum = 0.0
+    white = 0
     for y in range(half, size - half):
         for x in range(half, size - half):
             a = alpha.getpixel((x, y)) / 255.0
             total += 1
             alpha_sum += a
+    for y in range(size):
+        for x in range(size):
+            a = alpha.getpixel((x, y)) / 255.0
             if a > 0.05:
                 l = lum.getpixel((x, y)) / 255.0
                 min_lum = min(min_lum, l)
                 max_lum = max(max_lum, l)
+                if l >= 0.998 and a > 0.5:
+                    white += 1
     mean_alpha = alpha_sum / total
     assert mean_alpha >= 0.85, name + ": inner mean alpha {:.3f} below 0.85".format(mean_alpha)
-    assert min_lum <= 0.36 and max_lum >= 0.93, (
-        name + ": luminance range {:.3f}..{:.3f} does not span 0.35..0.95".format(min_lum, max_lum))
+    assert min_lum <= 0.55 and max_lum >= 0.9, (
+        name + ": luminance range {:.3f}..{:.3f} outside 0.55..0.9".format(min_lum, max_lum))
+    assert white <= 4, name + ": {} saturated-white pixels (specular)".format(white)
 
 
 def main():
