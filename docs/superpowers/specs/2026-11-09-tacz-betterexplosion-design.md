@@ -62,9 +62,11 @@ EntityKineticBullet -> ExplodeUtil.createExplosion(owner, exploder, damage, radi
                          |  Mixin HEAD, cancellable; server only; skipped when config enabled=false
                          v
                    BetterExplosions.detonate(ExplosionContext)
-                     1. BlockPass    TaCZ's own ProjectileExplosion, blocks only
-                     2. DamagePass   our damage model on entities
-                     3. FxPacket     one small S2C packet to nearby players
+                     1. BlockPass.begin    Start event + TaCZ's own ProjectileExplosion.explode()
+                                           (blocks computed, nothing destroyed yet)
+                     2. DamagePass         our damage model on entities
+                     3. BlockPass.finish   finalizeExplosion(false): blocks destroyed, drops spawned
+                     4. FxPacket           one small S2C packet to nearby players
 ```
 
 Package `com.poseidon.tacz_betterexplosion`:
@@ -72,10 +74,10 @@ Package `com.poseidon.tacz_betterexplosion`:
 | Unit | Responsibility |
 |---|---|
 | `mixin/ExplodeUtilMixin` | The only mixin. `@Mixin(value = ExplodeUtil.class, remap = false)`, `@Inject(method = "createExplosion", at = @At("HEAD"), cancellable = true)`. Does nothing on a client level or when disabled. Otherwise builds an `ExplosionContext` record `(level, owner, exploder, damage, radius, knockback, destroyBlock, pos)`, calls `BetterExplosions.detonate`, then cancels. |
-| `explosion/BetterExplosions` | Orchestrates the three passes. Posts Start through `BlockPass`; if Start is cancelled, nothing else runs. |
-| `explosion/BlockPass` | Creates a marker subclass of TaCZ `ProjectileExplosion`, posts `ExplosionEvent.Start`, runs `explode()` and `finalizeExplosion(false)`. A Detonate listener empties the entity list for the marker class only, so TaCZ does no entity damage. Block removal, drops, fire and TaCZ config stay as today. |
+| `explosion/BetterExplosions` | Orchestrates the passes in the order `BlockPass.begin`, `DamagePass`, `BlockPass.finish` (the vanilla and TaCZ order). If Start is cancelled, or `begin` fails, nothing else runs. If `DamagePass` fails, the error is logged and `finish` still runs, so the already computed blocks are still processed. |
+| `explosion/BlockPass` | Creates a marker subclass of TaCZ `ProjectileExplosion`. `begin` posts `ExplosionEvent.Start` and runs `explode()` (blocks computed, nothing destroyed yet); `finish` runs `finalizeExplosion(false)` (blocks destroyed, drops and fire spawned). A Detonate listener empties the entity list for the marker class only, so TaCZ does no entity damage. Block removal, drops, fire and TaCZ config stay as today. |
 | `explosion/DamageModel` | Pure maths (no Minecraft types), unit-tested. |
-| `explosion/DamagePass` | Builds the entity list, posts `ExplosionEvent.Detonate` through a tiny `Explosion` subclass so claim/protection mods can still remove targets, applies `DamageModel`, applies knockback. |
+| `explosion/DamagePass` | Builds the entity list, posts `ExplosionEvent.Detonate` through a tiny `Explosion` subclass so claim/protection mods can still remove targets, applies `DamageModel`, applies knockback. Runs between `BlockPass.begin` and `BlockPass.finish`: the drops and XP orbs that `finish` spawns are not yet in the world, so they are never hurt, and walls the explosion is about to break still shield targets from the cover rays. |
 | `net/ExplosionFxPacket`, `net/Network` | `SimpleChannel` with a strict version string. |
 | `client/fx/*` | Client-only: tier mapping, particle spawning, sound scheduling, shake, flash, throttles. Loaded only through the packet handler. |
 | `config/ServerConfig`, `config/ClientConfig` | Section 7. |
