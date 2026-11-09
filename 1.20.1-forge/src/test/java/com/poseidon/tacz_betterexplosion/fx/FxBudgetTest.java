@@ -125,10 +125,13 @@ class FxBudgetTest {
         assertShape(FxBudget.split(7), 2, 2, 2, 0, 0, 0, 1);
         // remainder 18 (budget 20): floors 3/6/1/1/1/2 (sum 14), leftover 4 to STEM, FIREBALL, SHRAPNEL, DEBRIS
         assertShape(FxBudget.split(20), 2, 4, 7, 1, 2, 1, 3);
+        // remainder 49 (budget 51): floors 10/16/4/4/3/7 (sum 44), leftover 5 to STEM, FIREBALL, SHRAPNEL,
+        // DEBRIS, SPARKS (DUST gets none)
+        assertShape(FxBudget.split(51), 2, 11, 17, 4, 5, 4, 8);
     }
 
     @Test
-    void splitHasNoLayerNamedRing() {
+    void layerEnumHasSevenLayersEndingInShrapnel() {
         for (Layer layer : Layer.values()) {
             assertFalse(layer.name().equals("RING"), "no ring layer");
         }

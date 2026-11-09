@@ -11,13 +11,15 @@ import net.minecraft.core.particles.SimpleParticleType;
  * Bright flash: additive, full-bright camera-facing billboard, default lifetime 6 ticks, colour
  * (1.0, 0.96, 0.85), {@code t = age / lifetime}. Alpha is {@link #setIntensity intensity} (default 1) for
  * {@code t < 0.25}, then {@code intensity * (1 - (t - 0.25) / 0.75)^1.5}. Size
- * {@code quadSize * (0.8 + 0.7 * easeOutCubic(t))}. The velocity is kept constant (no damping).
+ * {@code quadSize * (0.8 + 0.7 * easeOutCubic(t))}, capped at 12 blocks ({@link #maxRenderedSize}). The
+ * camera fade uses {@link #fadeSize} ({@code 0.25 * size}). The velocity is kept constant (no damping).
  */
 public final class FlashParticle extends FxParticle {
 
     private static final int LIFETIME = 6;
     private static final float HOLD_UNTIL = 0.25F;
     private static final float DECAY_POWER = 1.5F;
+    private static final float MAX_FLASH_SIZE = 12.0F;
 
     private float intensity = 1.0F;
 
@@ -40,6 +42,24 @@ public final class FlashParticle extends FxParticle {
     @Override
     protected float sizeAt(float t) {
         return this.quadSize * (0.8F + 0.7F * easeOutCubic(t));
+    }
+
+    /**
+     * Flash quads may grow to 12 blocks (above the default 6 cap) so the core (1.1R) and the halo (2R) stay
+     * different up to MEDIUM/LARGE. The 6 tick lifetime makes the larger quad cheap in fill rate.
+     */
+    @Override
+    protected float maxRenderedSize() {
+        return MAX_FLASH_SIZE;
+    }
+
+    /**
+     * A quarter of the size, so the flash does not vanish when the camera is inside the {@code size + 1.5}
+     * fade zone; the {@code ScreenFlash} overlay already covers the very near case.
+     */
+    @Override
+    protected float fadeSize() {
+        return 0.25F * this.renderSize;
     }
 
     @Override

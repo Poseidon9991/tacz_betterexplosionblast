@@ -52,7 +52,7 @@ source (LGPL-3.0 / GPL-3.0, studied only; no SBW code or assets are copied).
 
 In scope: damage model, replacement visuals/sound/shake, config, tests, performance budget.
 
-Out of scope: block crater redesign (block behaviour stays TaCZ's), shrapnel rays, hit indicators, dynamic lights,
+Out of scope: block crater redesign (block behaviour stays TaCZ's), shrapnel damage rays, hit indicators, dynamic lights,
 real sound recordings, shockwave damage delay (under one tick at TaCZ ranges), any dependency on SBW, non-TaCZ
 explosions.
 

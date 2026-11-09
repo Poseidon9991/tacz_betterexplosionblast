@@ -68,6 +68,15 @@ abstract class StreakParticle extends FxParticle {
         return halfLength * this.quadSize;
     }
 
+    /**
+     * The thin streak width, not the half-length: a streak only blocks the view across its width, so near
+     * shrapnel and sparks stay visible instead of fading within half-length + 1.5 blocks of the camera.
+     */
+    @Override
+    protected final float fadeSize() {
+        return this.shape.halfWidth() * Math.min(this.quadSize, MAX_RENDER_SIZE);
+    }
+
     @Override
     protected final void stepVelocity() {
         this.yd -= this.shape.gravity();

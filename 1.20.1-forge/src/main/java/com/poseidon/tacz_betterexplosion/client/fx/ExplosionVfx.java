@@ -37,7 +37,9 @@ public final class ExplosionVfx {
     /** Deepest block scan of {@link #findGround}. */
     private static final int GROUND_SCAN_CAP = 24;
     /** Dust tint when the ground block has no usable map colour. */
-    private static final float[] DEFAULT_DUST_TINT = {0.8F, 0.75F, 0.65F};
+    private static final float DEFAULT_DUST_R = 0.8F;
+    private static final float DEFAULT_DUST_G = 0.75F;
+    private static final float DEFAULT_DUST_B = 0.65F;
     /** The map colour moves {@code DUST_DESATURATE} of the way toward this grey. */
     private static final float DUST_GREY = 0.75F;
     private static final float DUST_DESATURATE = 0.4F;
@@ -216,11 +218,11 @@ public final class ExplosionVfx {
      */
     private static float[] dustTint(ClientLevel level, BlockPos groundPos, BlockState groundState) {
         if (groundState.isAir()) {
-            return DEFAULT_DUST_TINT;
+            return defaultDustTint();
         }
         MapColor mapColor = groundState.getMapColor(level, groundPos);
         if (mapColor == MapColor.NONE) {
-            return DEFAULT_DUST_TINT;
+            return defaultDustTint();
         }
         int rgb = mapColor.col;
         return new float[] {
@@ -228,6 +230,10 @@ public final class ExplosionVfx {
             Mth.lerp(DUST_DESATURATE, ((rgb >> 8) & 0xFF) / 255.0F, DUST_GREY),
             Mth.lerp(DUST_DESATURATE, (rgb & 0xFF) / 255.0F, DUST_GREY)
         };
+    }
+
+    private static float[] defaultDustTint() {
+        return new float[] {DEFAULT_DUST_R, DEFAULT_DUST_G, DEFAULT_DUST_B};
     }
 
     /** Ground block chunks tossed up; skipped when there are none to spawn or the ground state is air. */

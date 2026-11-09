@@ -10,7 +10,8 @@ import net.minecraft.util.Mth;
 
 /**
  * Fireball and smoke puffs ({@code t = age / lifetime}, size is a half-extent, see {@link FxParticle}). Both
- * variants multiply the final colour by the {@link #setTint tint} (default white).
+ * variants blend the final colour 60 percent toward the {@link #setTint tint} when one is set (default: no
+ * tint, colour unchanged).
  *
  * <p>FIRE: additive, full-bright, lifetime 10..26. Colour cream (1.0, 0.95, 0.80) at t=0, orange
  * (1.0, 0.55, 0.12) at t=0.35, dark red (0.35, 0.05, 0.02) at t=1. Alpha 1 until t=0.45, then linear to 0.
@@ -60,15 +61,19 @@ public final class PuffParticle extends FxParticle {
     private static final float SMOKE_FLUTTER = 0.003F;
     private static final float SMOKE_FLUTTER_FREQUENCY = 0.77F;
 
+    /** Share of the {@link #setTint tint} in the final colour of a tinted puff. */
+    private static final float TINT_BLEND = 0.6F;
+
     private final Variant variant;
     private final int light;
     private final float phase;
     private final float phase2;
     private final float brightness;
     private final float spin;
-    private float tintR = 1.0F;
-    private float tintG = 1.0F;
-    private float tintB = 1.0F;
+    private boolean tinted;
+    private float tintR;
+    private float tintG;
+    private float tintB;
 
     PuffParticle(
             ClientLevel level,
@@ -101,8 +106,13 @@ public final class PuffParticle extends FxParticle {
         }
     }
 
-    /** Multiplies the final colour (fire and smoke) by {@code (r, g, b)}; the default is (1, 1, 1). */
+    /**
+     * Blends the colour toward {@code (r, g, b)}: {@code colour = lerp(gradient * brightness, tint, 0.6)}, so
+     * a tinted puff (the ground dust) is lighter than the dark stem smoke instead of darker. Without a tint
+     * (the default) the gradient colour is used unchanged.
+     */
     public void setTint(float r, float g, float b) {
+        this.tinted = true;
         this.tintR = r;
         this.tintG = g;
         this.tintB = b;
@@ -156,9 +166,11 @@ public final class PuffParticle extends FxParticle {
                 this.alpha = SMOKE_MAX_ALPHA * (1.0F - (t - SMOKE_FADE_OUT_START) / (1.0F - SMOKE_FADE_OUT_START));
             }
         }
-        this.rCol *= this.tintR;
-        this.gCol *= this.tintG;
-        this.bCol *= this.tintB;
+        if (this.tinted) {
+            this.rCol = Mth.lerp(TINT_BLEND, this.rCol, this.tintR);
+            this.gCol = Mth.lerp(TINT_BLEND, this.gCol, this.tintG);
+            this.bCol = Mth.lerp(TINT_BLEND, this.bCol, this.tintB);
+        }
     }
 
     @Override

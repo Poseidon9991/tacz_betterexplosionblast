@@ -22,7 +22,9 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>"Size" follows the vanilla convention: a half-extent in blocks (the quad is {@code 2 * size} wide).
  * The rendered size is capped at {@value #MAX_RENDER_SIZE} blocks. Particles fade out when the camera is
- * closer than {@code size + 1.5} blocks and emit no vertices once the fade is near zero (fill-rate control).
+ * closer than {@code fadeSize() + 1.5} blocks and emit no vertices once the fade is near zero (fill-rate
+ * control). {@link #fadeSize()} defaults to the rendered size; subclasses override it when the extent that
+ * fills the screen is smaller than the size (thin streaks, large short-lived flashes).
  *
  * <p>Counter: {@link FxState#particleAdded()} runs in the constructor and {@link FxState#particleRemoved()}
  * in {@link #remove()}, once per instance. Particles that are cleared or evicted without {@code remove()}
@@ -68,6 +70,15 @@ public abstract class FxParticle extends TextureSheetParticle {
         return MAX_RENDER_SIZE;
     }
 
+    /**
+     * Distance (in blocks) the camera fade starts at: the particle is invisible when the camera is closer
+     * than this to its centre and fully visible beyond this plus 1.5. Defaults to {@link #renderSize};
+     * valid during {@link #render} (after {@code renderSize} is set).
+     */
+    protected float fadeSize() {
+        return this.renderSize;
+    }
+
     /** Sets {@code rCol, gCol, bCol} and {@code alpha} (before the camera fade) for the life fraction {@code t}. */
     protected abstract void applyLook(float t);
 
@@ -95,7 +106,7 @@ public abstract class FxParticle extends TextureSheetParticle {
         float t = lifeFraction(partialTicks);
         this.renderSize = Math.min(sizeAt(t), maxRenderedSize());
         applyLook(t);
-        float fade = cameraFade(camera, wx, wy, wz, this.renderSize);
+        float fade = cameraFade(camera, wx, wy, wz, fadeSize());
         this.alpha *= fade;
         if (fade <= MIN_FADE || this.alpha <= MIN_ALPHA) {
             return;
