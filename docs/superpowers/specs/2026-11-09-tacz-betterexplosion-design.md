@@ -29,7 +29,8 @@ source (LGPL-3.0 / GPL-3.0, studied only; no SBW code or assets are copied).
   `onBulletTick`) with `owner = getOwner()` and `exploder = the bullet`.
 - `createExplosion` returns immediately on a non-`ServerLevel`, builds a `ProjectileExplosion` (extends vanilla
   `Explosion`), posts Forge `ExplosionEvent.Start` (cancel returns early), calls `explode()` and
-  `finalizeExplosion(false)`, then sends a `ClientboundExplodePacket` to players within
+  `finalizeExplosion(true)` (the flag only gates client-side particles, so our `false` is equivalent on a server),
+  then sends a `ClientboundExplodePacket` to players within
   `AmmoConfig.EXPLOSIVE_AMMO_VISIBLE_DISTANCE`.
 - `ProjectileExplosion.explode()` computes blocks, posts `ExplosionEvent.Detonate` with the entity list from
   `level.getEntities(exploder, AABB(centre +- 2R))` (the owner is included, only the bullet is excluded), then for each
