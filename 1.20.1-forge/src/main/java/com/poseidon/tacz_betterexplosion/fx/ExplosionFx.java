@@ -5,6 +5,14 @@ import io.netty.buffer.ByteBuf;
 /** Server-to-client explosion effect payload and its byte codec. */
 public record ExplosionFx(double x, double y, double z, float radius, byte flags, int seed) {
 
+    /** {@code flags} bit 0: the blast centre is in water (underwater effect variant). */
+    public static final byte FLAG_UNDERWATER = 1;
+
+    /** Whether the {@link #FLAG_UNDERWATER} bit is set; other bits are ignored. */
+    public boolean underwater() {
+        return (flags & FLAG_UNDERWATER) != 0;
+    }
+
     /** Writes x, y, z, radius, flags, seed in that order. */
     public void encode(ByteBuf buf) {
         buf.writeDouble(x);

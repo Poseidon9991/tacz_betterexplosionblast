@@ -20,8 +20,10 @@ import java.util.List;
 
 /**
  * Hurts and knocks back entities with {@link DamageModel}; TaCZ's own entity damage is switched off by
- * {@link BlockPass}. Like TaCZ's {@code ProjectileExplosion.explode()}, any entity that is not a spectator
- * is knocked back (not only living ones); dampening by enchantments applies to living entities only.
+ * {@link BlockPass}. Like TaCZ's {@code ProjectileExplosion.explode()}, knockback applies to every entity
+ * except spectators (not only living ones); dampening by enchantments applies to living entities only.
+ * Flying creative players are skipped for the player-sync map in TaCZ; here they get no knockback at all
+ * (stricter: TaCZ still changes their server-side motion).
  */
 public final class DamagePass {
 
@@ -60,12 +62,13 @@ public final class DamagePass {
             }
 
             float amount = (float) DamageModel.damage(ctx.damage(), p, params);
+            if (amount > 0.0f && entity instanceof Player) {
+                // Same as TaCZ Tweaks' wrapper around TaCZ's hurt call: players only.
+                amount = TweaksCompat.playerDamage(amount);
+            }
             if (amount > 0.0f) {
-                if (entity instanceof Player) {
-                    // Same as TaCZ Tweaks' wrapper around TaCZ's hurt call: players only.
-                    amount = TweaksCompat.playerDamage(amount);
-                }
                 // Direct hits: the bullet's own hit must not shield the target from the explosion.
+                // A hit that Tweaks zeroed skips this, so it never strips the player's i-frames.
                 entity.invulnerableTime = 0;
                 entity.hurt(source, amount);
             }

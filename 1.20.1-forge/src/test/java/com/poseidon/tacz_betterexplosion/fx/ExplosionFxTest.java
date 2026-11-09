@@ -1,6 +1,8 @@
 package com.poseidon.tacz_betterexplosion.fx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -49,6 +51,29 @@ class ExplosionFxTest {
             assertEquals(Double.doubleToRawLongBits(original.z()), Double.doubleToRawLongBits(decoded.z()));
             assertEquals(Float.floatToRawIntBits(original.radius()), Float.floatToRawIntBits(decoded.radius()));
         }
+    }
+
+    @Test
+    void underwaterFlagIsBitZero() {
+        assertEquals((byte) 1, ExplosionFx.FLAG_UNDERWATER);
+        assertTrue(new ExplosionFx(0.0, 0.0, 0.0, 1.0f, (byte) 1, 0).underwater());
+        assertFalse(new ExplosionFx(0.0, 0.0, 0.0, 1.0f, (byte) 0, 0).underwater());
+        assertFalse(new ExplosionFx(0.0, 0.0, 0.0, 1.0f, (byte) 2, 0).underwater(), "other bits must not count");
+        assertTrue(new ExplosionFx(0.0, 0.0, 0.0, 1.0f, (byte) 3, 0).underwater());
+        assertTrue(new ExplosionFx(0.0, 0.0, 0.0, 1.0f, (byte) -1, 0).underwater());
+    }
+
+    @Test
+    void underwaterFlagSurvivesRoundTrip() {
+        ExplosionFx original =
+                new ExplosionFx(1.5, -64.25, 300.0, 4.0f, ExplosionFx.FLAG_UNDERWATER, 123456);
+        ByteBuf buf = Unpooled.buffer();
+        original.encode(buf);
+        assertEquals(33, buf.writerIndex());
+        assertEquals(ExplosionFx.FLAG_UNDERWATER, buf.getByte(28));
+        ExplosionFx decoded = ExplosionFx.decode(buf);
+        assertTrue(decoded.underwater());
+        assertEquals(original, decoded);
     }
 
     @Test

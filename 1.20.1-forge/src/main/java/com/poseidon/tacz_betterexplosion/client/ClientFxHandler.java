@@ -25,7 +25,8 @@ import org.joml.Vector3f;
  * Client-side explosion effect. Reached only through {@code DistExecutor} from the network handler, so a
  * dedicated server never loads it. Computes the distance and the quality budget, splits it over the visual
  * layers of {@link ExplosionVfx}, then always plays the distance-banded sound plus screen shake and flash.
- * Per-tier shake strength in degrees: MINI 0.4, SMALL 0.8, MEDIUM 1.5, LARGE 2.5, HUGE 4.0.
+ * Per-tier shake strength in degrees: MINI 0.4, SMALL 0.8, MEDIUM 1.5, LARGE 2.5, HUGE 4.0, times 1.3 for an
+ * underwater blast (before the config and threshold checks).
  */
 public final class ClientFxHandler {
 
@@ -37,6 +38,8 @@ public final class ClientFxHandler {
     private static final float MIN_SHAKE = 0.05F;
     /** Extra blocks of flash range past the explosion radius. */
     private static final double FLASH_EXTRA_RANGE = 3.0;
+    /** Shake multiplier when the blast is underwater. */
+    private static final float UNDERWATER_SHAKE = 1.3F;
 
     private ClientFxHandler() {
     }
@@ -59,6 +62,7 @@ public final class ClientFxHandler {
                 return;
             }
 
+            boolean underwater = fx.underwater();
             ExplosionTier tier = ExplosionTier.fromRadius(radius);
             Camera camera = mc.gameRenderer.getMainCamera();
             Vec3 cam = camera.getPosition();
@@ -103,16 +107,19 @@ public final class ClientFxHandler {
                 BlockState groundState = Double.isNaN(groundY)
                         ? Blocks.AIR.defaultBlockState()
                         : level.getBlockState(BlockPos.containing(x, groundY - 0.01, z));
-                int spawned = ExplosionVfx.spawn(fx, level, split, groundY, groundState);
+                int spawned = ExplosionVfx.spawn(fx, level, split, groundY, groundState, underwater);
                 FxState.addSpawned(spawned);
             }
 
-            ExplosionSounds.play(fx, level, dist);
+            ExplosionSounds.play(fx, level, dist, underwater);
 
             if (ClientConfig.screenShake()) {
                 float strength = (float) (TIER_SHAKE[tier.ordinal()]
                         * Math.max(0.0, 1.0 - dist / tier.particleRange())
                         * ClientConfig.shakeStrength());
+                if (underwater) {
+                    strength *= UNDERWATER_SHAKE;
+                }
                 if (strength >= MIN_SHAKE) {
                     ScreenShake.kick(strength);
                 }

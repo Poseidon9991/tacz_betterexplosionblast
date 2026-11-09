@@ -142,6 +142,23 @@ class TweaksCompatTest {
     }
 
     @Test
+    void positiveInfinityResultPassesThroughUnchanged() {
+        // Tweaks parity: the evaluator result is not capped, only clamped at zero from below.
+        TweaksCompat compat = new TweaksCompat(PLAYER_DAMAGE, (modifier, value) -> Double.POSITIVE_INFINITY);
+        assertEquals(Float.POSITIVE_INFINITY, compat.apply(10.0f), 0.0f);
+        assertFalse(compat.isDisabled());
+        assertEquals(0, compat.warnings());
+    }
+
+    @Test
+    void negativeInfinityResultClampsToZero() {
+        TweaksCompat compat = new TweaksCompat(PLAYER_DAMAGE, (modifier, value) -> Double.NEGATIVE_INFINITY);
+        assertEquals(0.0f, compat.apply(10.0f), 0.0f);
+        assertFalse(compat.isDisabled());
+        assertEquals(0, compat.warnings());
+    }
+
+    @Test
     void nonFiniteAmountIsReturnedUntouchedWithoutEvaluating() {
         AtomicInteger calls = new AtomicInteger();
         TweaksCompat compat = new TweaksCompat(PLAYER_DAMAGE, (modifier, value) -> {

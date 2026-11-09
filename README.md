@@ -2,7 +2,7 @@
 
 Forge 1.20.1 addon for Timeless and Classics Zero (TaCZ) that improves explosions caused by TaCZ guns and projectiles.
 
-v0.2.1: cover-aware explosion damage plus the full client effect — layered particles, distance-banded sound, screen shake and flash, all with performance throttles. 0.2.1 is a visual tuning round: no shock ring, longer flash and smoke, scattered ground dust, and shrapnel streaks.
+v0.3.0: cover-aware explosion damage plus the full client effect — layered particles, distance-banded sound, screen shake and flash, all with performance throttles. 0.3.0 adds an underwater effect variant, TaCZ Tweaks player-damage compatibility and a round of damage-model hardening.
 
 ## How it works
 
@@ -14,6 +14,15 @@ TaCZ creates every explosive-round explosion through `ExplodeUtil.createExplosio
 4. A small packet tells players near the blast to play the effect.
 
 On the client the packet drives a layered effect built from the tier's particle budget: flash (core plus halo, about 6 ticks), fireball, long-lived billowing smoke stem, a scattered low dust cloud tinted by the ground block, debris, sparks and fast shrapnel streaks. The sound is layered too — close, mid and far bands picked by distance and delayed by distance to simulate travel time. Screen shake scales with tier and proximity, and a longer white flash fires when the blast is close.
+
+### Underwater variant
+
+When the blast centre is in water, the server sets bit 0 of the packet's `flags` byte and the client swaps in an underwater look. Damage, knockback and blocks are not affected, only the effect:
+
+- the flash is smaller and dimmer, and there is no fireball;
+- the smoke stem becomes a pale froth plume (no mushroom cap), and the ground dust becomes slow silt;
+- sparks and shrapnel become bubbles (at most 48);
+- the sound is lower (pitch x0.7) and softer (volume x0.8), and the screen shake is 1.3x stronger.
 
 Budgets are throttled client-side: a global live-particle cap, a burst penalty for rapid consecutive explosions, an optional fps-based cut, distance culling (far explosions drop to flash, stem and sound; beyond the tier's range only sound), and the vanilla Particles setting is honoured.
 
@@ -44,6 +53,15 @@ Forge generates two files. The server file lives in each world's `serverconfig` 
 | `screenShake` | true | — | Camera shake for nearby explosions |
 | `shakeStrength` | 1.0 | 0.0–2.0 | Scales the shake strength |
 | `screenFlash` | true | — | White flash for explosions close by |
+
+## Effect packet
+
+The server sends one small packet per explosion: `x, y, z` (3 doubles), `radius` (float), `flags` (byte) and `seed` (int), 33 bytes in that order. The client derives the tier from `radius` and seeds all its random offsets from `seed`, so every player sees the same blast. `flags` bits:
+
+| Bit | Meaning |
+|---|---|
+| 0 (value 1) | Underwater: the blast centre is in water (implemented in 0.3.0) |
+| 1-7 | Reserved (ignored by the client) |
 
 ## Tiers and budgets
 

@@ -45,8 +45,8 @@ source (LGPL-3.0 / GPL-3.0, studied only; no SBW code or assets are copied).
   (about 290 for LARGE and 345 for HUGE, counted from its presets, 150 of them just the shock ring), random per-explosion
   scale, distance-tiered sounds, screen shake.
 - Other mods in the target pack: TaCZ Tweaks wraps `Entity.hurt` inside `ProjectileExplosion.explode()` for a
-  player-damage modifier (our damage pass bypasses it, so `TweaksCompat` re-applies it, see section 5); TACZ Attributes modifies bullet explosion fields before the
-  hook, so we receive modified values.
+  player-damage modifier (our damage pass bypasses it, so `TweaksCompat` re-applies it, see section 5); TACZ
+  Attributes modifies bullet explosion fields before the hook, so we receive modified values.
 
 ## 3. Scope
 
@@ -136,9 +136,9 @@ Rules:
 ## 6. Effects (client)
 
 The server sends `ExplosionFxPacket { double x, y, z; float radius; byte flags; int seed }` to players within
-`max(AmmoConfig.EXPLOSIVE_AMMO_VISIBLE_DISTANCE, tier packet range)`. `flags` bit 0 is reserved for the underwater
-variant (milestone 3). The client derives the tier from `radius`, seeds a `RandomSource` from `seed`, and applies
-+-20% random scale.
+`max(AmmoConfig.EXPLOSIVE_AMMO_VISIBLE_DISTANCE, tier packet range)`. `flags` bit 0 marks an underwater blast (the
+centre is in water; implemented in 0.3.0), the other bits are reserved. The client derives the tier from `radius`,
+seeds a `RandomSource` from `seed`, and applies +-20% random scale.
 
 | Tier | Radius R | Particle budget (quality HIGH) | Packet range | Particle range |
 |---|---|---|---|---|
@@ -248,7 +248,8 @@ direct hit stacking; with TaCZ Tweaks installed; `/betterexplosion test` budgets
 - **M2 (v0.2.0, implemented — pending the author's in-game gate)**: the full layered effects, sound, shake,
   throttles, `/betterexplosion test`, generated textures.
   M2 tuning round 1 (no ring, longer flash/smoke, shrapnel) in 0.2.1, pending author gate.
-- **M3**: underwater variant, LOD tuning from measurements, TaCZ Tweaks player-damage compat.
+- **M3 (v0.3.0)**: TaCZ Tweaks player-damage compat, damage-model hardening and the underwater variant are
+  implemented; LOD retuning waits for the author's `/betterexplosion test` measurements.
 
 ## 12. Risks
 
