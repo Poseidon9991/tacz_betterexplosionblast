@@ -107,7 +107,8 @@ public final class ClientFxHandler {
                 BlockState groundState = Double.isNaN(groundY)
                         ? Blocks.AIR.defaultBlockState()
                         : level.getBlockState(BlockPos.containing(x, groundY - 0.01, z));
-                int spawned = ExplosionVfx.spawn(fx, level, split, groundY, groundState, underwater);
+                int spawned = ExplosionVfx.spawn(
+                        fx, level, split, groundY, groundState, underwater, ClientConfig.quality());
                 FxState.addSpawned(spawned);
             }
 

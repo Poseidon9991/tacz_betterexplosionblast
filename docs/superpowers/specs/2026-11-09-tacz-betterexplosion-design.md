@@ -196,7 +196,9 @@ Throttles (all client-side, evaluated at spawn time, O(1)):
 - The vanilla Particles setting is honoured: Decreased x0.5, Minimal x0.15.
 - LOD and culling: beyond about 64 blocks only flash, stem and sound; beyond the tier's particle range only sound;
   explosions behind the camera and more than 24 blocks away get about 40%.
-- Quality presets LOW / MEDIUM / HIGH / ULTRA map to density 0.35 / 0.7 / 1.0 / 1.5.
+- Quality presets LOW / MEDIUM / HIGH map to density 0.3 / 0.65 / 1.0. LOW drops debris, sparks and
+  shrapnel; MEDIUM drops debris and sparks (shrapnel stays); HIGH spawns every layer. Blocked layers
+  are not redistributed.
 
 Server cost: two AABB queries per explosion (TaCZ's own `explode()` query plus ours; ours is bounded by `maxTargets`, default 128 targets, nearest first), vanilla visibility
 rays only, one packet of about 40 bytes to nearby players, nothing per tick.
@@ -211,7 +213,7 @@ Server (`tacz_betterexplosion-server.toml`): `enabled` (true), `reachMultiplier`
 `damageMultiplier` (1.0), `knockbackMultiplier` (1.0), `maxTargets` (128). Getters return their defaults while the spec
 is not loaded (same convention as the sibling compat mods).
 
-Client (`tacz_betterexplosion-client.toml`): `quality` (HIGH), `maxLiveParticles` (700), `adaptiveQuality` (true),
+Client (`tacz_betterexplosion-client.toml`): `quality` (LOW / MEDIUM / HIGH, default HIGH), `maxLiveParticles` (700), `adaptiveQuality` (true),
 `screenShake` (true), `shakeStrength` (1.0), `screenFlash` (true).
 
 ## 9. Compatibility

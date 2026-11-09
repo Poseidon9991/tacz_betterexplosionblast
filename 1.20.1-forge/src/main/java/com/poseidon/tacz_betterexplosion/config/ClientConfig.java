@@ -12,7 +12,10 @@ public final class ClientConfig {
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
     public static final ForgeConfigSpec.EnumValue<Quality> QUALITY = BUILDER
-            .comment("Explosion particle quality. Scales the particle budget of each explosion.")
+            .comment("Explosion particle quality. Scales the particle budget of each explosion.",
+                    "LOW: density 0.3, no debris, sparks or shrapnel (flash, fireball, stem, dust only).",
+                    "MEDIUM: density 0.65, adds shrapnel; still no debris or sparks.",
+                    "HIGH: density 1.0, every layer.")
             .defineEnum("quality", Quality.valueOf(ExplosionDefaults.QUALITY));
 
     public static final ForgeConfigSpec.IntValue MAX_LIVE_PARTICLES = BUILDER

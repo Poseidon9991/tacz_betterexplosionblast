@@ -32,10 +32,9 @@ class ExplosionDefaultsTest {
 
     @Test
     void qualityDensities() {
-        assertEquals(0.35, Quality.LOW.density);
-        assertEquals(0.7, Quality.MEDIUM.density);
+        assertEquals(0.3, Quality.LOW.density);
+        assertEquals(0.65, Quality.MEDIUM.density);
         assertEquals(1.0, Quality.HIGH.density);
-        assertEquals(1.5, Quality.ULTRA.density);
         assertEquals(Quality.HIGH, Quality.valueOf(ExplosionDefaults.QUALITY));
     }
 

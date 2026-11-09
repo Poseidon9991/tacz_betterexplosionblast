@@ -6,6 +6,7 @@ import com.poseidon.tacz_betterexplosion.client.particle.PuffParticle;
 import com.poseidon.tacz_betterexplosion.fx.ExplosionFx;
 import com.poseidon.tacz_betterexplosion.fx.ExplosionTier;
 import com.poseidon.tacz_betterexplosion.fx.FxBudget;
+import com.poseidon.tacz_betterexplosion.fx.Quality;
 import com.poseidon.tacz_betterexplosion.particle.DebrisOption;
 import java.util.EnumMap;
 import net.minecraft.client.Minecraft;
@@ -83,6 +84,8 @@ public final class ExplosionVfx {
      * Spawns every layer per the {@code split} counts and returns the particles actually created.
      * {@code groundY} is {@link #findGround}'s result; {@code groundState} is the block at the ground position
      * (unused when {@code groundY} is {@code NaN}). {@code underwater} selects the underwater variant.
+     * Layers {@code quality} blocks are dropped to zero, not redistributed; underwater the bubble count
+     * derives from the gated sparks and shrapnel counts, so it falls with them.
      */
     public static int spawn(
             ExplosionFx fx,
@@ -90,7 +93,8 @@ public final class ExplosionVfx {
             EnumMap<FxBudget.Layer, Integer> split,
             double groundY,
             BlockState groundState,
-            boolean underwater) {
+            boolean underwater,
+            Quality quality) {
         RandomSource rand = RandomSource.create(fx.seed());
         float factor = 0.8F + rand.nextFloat() * 0.4F;
         ExplosionTier tier = ExplosionTier.fromRadius(fx.radius());
@@ -101,31 +105,40 @@ public final class ExplosionVfx {
         boolean ground = !Double.isNaN(groundY);
         ParticleEngine engine = Minecraft.getInstance().particleEngine;
 
+        // Quality-blocked layers drop to zero so their spawn loops are skipped; the budget is not
+        // redistributed, so the layers that stay allowed keep their exact split share.
+        EnumMap<FxBudget.Layer, Integer> counts = new EnumMap<>(split);
+        for (FxBudget.Layer layer : FxBudget.Layer.values()) {
+            if (!quality.allows(layer)) {
+                counts.put(layer, 0);
+            }
+        }
+
         int spawned = 0;
-        spawned += spawnFlash(engine, split.get(FxBudget.Layer.FLASH), rand, cx, cy, cz, r, factor, underwater);
+        spawned += spawnFlash(engine, counts.get(FxBudget.Layer.FLASH), rand, cx, cy, cz, r, factor, underwater);
         if (!underwater) {
             // Underwater the fireball layer is dropped, not redistributed.
-            spawned += spawnFireball(engine, split.get(FxBudget.Layer.FIREBALL), rand, cx, cy, cz, r, factor);
+            spawned += spawnFireball(engine, counts.get(FxBudget.Layer.FIREBALL), rand, cx, cy, cz, r, factor);
         }
         if (underwater) {
-            spawned += spawnFrothStem(engine, split.get(FxBudget.Layer.STEM), rand, cx, cy, cz, r, factor);
+            spawned += spawnFrothStem(engine, counts.get(FxBudget.Layer.STEM), rand, cx, cy, cz, r, factor);
         } else {
-            spawned += spawnStem(engine, split.get(FxBudget.Layer.STEM), rand, cx, cy, cz, r, factor, tier);
+            spawned += spawnStem(engine, counts.get(FxBudget.Layer.STEM), rand, cx, cy, cz, r, factor, tier);
         }
         if (ground) {
             spawned += spawnDust(
-                    engine, split.get(FxBudget.Layer.DUST), rand, level, cx, cz, groundY, r, factor, groundState,
+                    engine, counts.get(FxBudget.Layer.DUST), rand, level, cx, cz, groundY, r, factor, groundState,
                     underwater);
             spawned += spawnDebris(
-                    engine, split.get(FxBudget.Layer.DEBRIS), rand, cx, cz, groundY, r, groundState);
+                    engine, counts.get(FxBudget.Layer.DEBRIS), rand, cx, cz, groundY, r, groundState);
         }
         if (underwater) {
             // The sparks and shrapnel budget becomes bubbles, never more than the two layers together.
-            int bubbles = Math.min(MAX_BUBBLES, split.get(FxBudget.Layer.SPARKS) + split.get(FxBudget.Layer.SHRAPNEL));
+            int bubbles = Math.min(MAX_BUBBLES, counts.get(FxBudget.Layer.SPARKS) + counts.get(FxBudget.Layer.SHRAPNEL));
             spawned += spawnBubbles(engine, bubbles, rand, cx, cy, cz, r);
         } else {
-            spawned += spawnSparks(engine, split.get(FxBudget.Layer.SPARKS), rand, cx, cy, cz);
-            spawned += spawnShrapnel(engine, split.get(FxBudget.Layer.SHRAPNEL), rand, cx, cy, cz, r, ground);
+            spawned += spawnSparks(engine, counts.get(FxBudget.Layer.SPARKS), rand, cx, cy, cz);
+            spawned += spawnShrapnel(engine, counts.get(FxBudget.Layer.SHRAPNEL), rand, cx, cy, cz, r, ground);
         }
 
         return spawned;

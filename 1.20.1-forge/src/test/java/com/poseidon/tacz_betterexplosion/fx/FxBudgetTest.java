@@ -49,11 +49,11 @@ class FxBudgetTest {
 
     @Test
     void budgetScalesWithFactors() {
-        assertEquals(19, FxBudget.budget(ExplosionTier.MEDIUM, Quality.LOW, VanillaParticles.ALL, 1, 1, 1, 0, 700));
+        assertEquals(17, FxBudget.budget(ExplosionTier.MEDIUM, Quality.LOW, VanillaParticles.ALL, 1, 1, 1, 0, 700));
         assertEquals(
                 28, FxBudget.budget(ExplosionTier.MEDIUM, Quality.HIGH, VanillaParticles.DECREASED, 1, 1, 1, 0, 700));
         assertEquals(0, FxBudget.budget(ExplosionTier.MEDIUM, Quality.HIGH, VanillaParticles.ALL, 1, 1, 0, 0, 700));
-        assertEquals(100, FxBudget.budget(ExplosionTier.HUGE, Quality.ULTRA, VanillaParticles.ALL, 1, 1, 1, 0, 100));
+        assertEquals(100, FxBudget.budget(ExplosionTier.HUGE, Quality.HIGH, VanillaParticles.ALL, 1, 1, 1, 0, 100));
     }
 
     @Test

@@ -47,12 +47,14 @@ Forge generates two files. The server file lives in each world's `serverconfig` 
 
 | Key | Default | Range | Effect |
 |---|---|---|---|
-| `quality` | HIGH | LOW / MEDIUM / HIGH / ULTRA | Scales the per-explosion particle budget |
+| `quality` | HIGH | LOW / MEDIUM / HIGH | LOW: density 0.3, drops debris/sparks/shrapnel (keeps flash, fireball, stem, dust); MEDIUM: 0.65, drops debris/sparks (adds shrapnel); HIGH: 1.0, every layer |
 | `maxLiveParticles` | 700 | 50–5000 | Cap on this mod's particles alive at once |
 | `adaptiveQuality` | true | — | Cuts budgets automatically when the frame rate drops |
 | `screenShake` | true | — | Camera shake for nearby explosions |
 | `shakeStrength` | 1.0 | 0.0–2.0 | Scales the shake strength |
 | `screenFlash` | true | — | White flash for explosions close by |
+
+`quality = "MEDIUM"` in `config/tacz_betterexplosion-client.toml` reloads on file save — no restart needed.
 
 ## Effect packet
 
