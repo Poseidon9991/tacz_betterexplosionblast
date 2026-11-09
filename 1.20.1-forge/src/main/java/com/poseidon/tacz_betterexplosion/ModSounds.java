@@ -24,7 +24,10 @@ public final class ModSounds {
 
     private ModSounds() {}
 
+    // The (namespace, path) constructor is flagged for removal in Forge 47.4.0 but works on every 1.20.1 build;
+    // fromNamespaceAndPath needs a newer Forge 47.x and OptiFine strips it.
+    @SuppressWarnings("removal")
     private static ResourceLocation id(String name) {
-        return ResourceLocation.fromNamespaceAndPath(TaczBetterExplosion.MOD_ID, name);
+        return new ResourceLocation(TaczBetterExplosion.MOD_ID, name);
     }
 }

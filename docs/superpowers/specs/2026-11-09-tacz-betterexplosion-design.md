@@ -79,7 +79,7 @@ Package `com.poseidon.tacz_betterexplosion`:
 | `explosion/BlockPass` | Creates a marker subclass of TaCZ `ProjectileExplosion`. `begin` posts `ExplosionEvent.Start` and runs `explode()` (blocks computed, nothing destroyed yet); `finish` runs `finalizeExplosion(false)` (blocks destroyed, drops and fire spawned). A Detonate listener empties the entity list for the marker class only, so TaCZ does no entity damage. Block removal, drops, fire and TaCZ config stay as today. |
 | `explosion/DamageModel` | Pure maths (no Minecraft types), unit-tested. |
 | `explosion/DamagePass` | Builds the entity list, posts `ExplosionEvent.Detonate` through a tiny `Explosion` subclass so claim/protection mods can still remove targets, applies `DamageModel`, applies knockback. Runs between `BlockPass.begin` and `BlockPass.finish`: the drops and XP orbs that `finish` spawns are not yet in the world, so they are never hurt, and walls the explosion is about to break still shield targets from the cover rays. |
-| `net/ExplosionFxPacket`, `net/Network` | `SimpleChannel` with a strict version string. |
+| `fx/ExplosionFx`, `net/Network` | `SimpleChannel` with a strict version string. |
 | `client/fx/*` | Client-only: tier mapping, particle spawning, sound scheduling, shake, flash, throttles. Loaded only through the packet handler. |
 | `config/ServerConfig`, `config/ClientConfig` | Section 7. |
 
@@ -162,8 +162,8 @@ Layers:
 6. **Shrapnel**: fast, bright streaks flying out of the centre (upper hemisphere when there is ground, full sphere for air
    bursts).
 
-Sound: the client plays close crack, mid thump and far rumble layers, each delayed by `distance / 340 m/s`
-(about 17 blocks per tick). Our own sound events are registered and mapped in `sounds.json` to vanilla explosion and
+Sound: the client plays one band per explosion, picked by distance (close crack, mid thump or far rumble), delayed by
+`distance / 340 m/s` (about 17 blocks per tick). Our own sound events are registered and mapped in `sounds.json` to vanilla explosion and
 thunder sound files with pitch and volume per tier; real recordings can replace them later by adding files and editing
 that JSON.
 
@@ -198,7 +198,7 @@ Throttles (all client-side, evaluated at spawn time, O(1)):
   explosions behind the camera and more than 24 blocks away get about 40%.
 - Quality presets LOW / MEDIUM / HIGH / ULTRA map to density 0.35 / 0.7 / 1.0 / 1.5.
 
-Server cost: one AABB query per explosion, at most `maxTargets` targets (default 128, nearest first), vanilla visibility
+Server cost: two AABB queries per explosion (TaCZ's own `explode()` query plus ours; ours is bounded by `maxTargets`, default 128 targets, nearest first), vanilla visibility
 rays only, one packet of about 40 bytes to nearby players, nothing per tick.
 
 Acceptance (milestone 2), at default quality: a client command `/betterexplosion test <tier> [count]` prints particles

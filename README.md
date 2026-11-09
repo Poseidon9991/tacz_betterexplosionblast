@@ -17,7 +17,7 @@ On the client the packet drives a layered effect built from the tier's particle 
 
 ### Underwater variant
 
-When the blast centre is in water, the server sets bit 0 of the packet's `flags` byte and the client swaps in an underwater look. Damage, knockback and blocks are not affected, only the effect:
+When the blast centre, or a point 0.1 block from it along any axis, is in water (TaCZ reports block impacts exactly on a block face, so the centre alone can read dry), the server sets bit 0 of the packet's `flags` byte and the client swaps in an underwater look. Damage, knockback and blocks are not affected, only the effect:
 
 - the flash is smaller and dimmer, and there is no fireball;
 - the smoke stem becomes a pale froth plume (no mushroom cap), and the ground dust becomes slow silt;
@@ -60,7 +60,7 @@ The server sends one small packet per explosion: `x, y, z` (3 doubles), `radius`
 
 | Bit | Meaning |
 |---|---|
-| 0 (value 1) | Underwater: the blast centre is in water (implemented in 0.3.0) |
+| 0 (value 1) | Underwater: the blast centre, or a point 0.1 block from it, is in water (implemented in 0.3.0) |
 | 1-7 | Reserved (ignored by the client) |
 
 ## Tiers and budgets
@@ -77,7 +77,14 @@ Explosions are classed by radius into tiers, each with a HIGH-quality particle b
 
 ## Test command
 
-`/betterexplosion test <tier> [count]` (client command, `count` 1–50, default 1) spawns explosions at the look target through the real effect path and reports particles spawned, the median handler time and the peak live count — a dev/perf check for the budgets above.
+`/betterexplosion test <tier> [count] [underwater]` (client command, `count` 1–50, default 1) spawns explosions at the look target through the real effect path and reports particles spawned, the median handler time and the peak live count — a dev/perf check for the budgets above. Add the optional `underwater` literal to send the explosions with the underwater flag set and preview the underwater variant (the chat line then ends with ` (underwater)`). Without it the flags are 0.
+
+```
+/betterexplosion test medium
+/betterexplosion test medium 10
+/betterexplosion test medium underwater
+/betterexplosion test medium 10 underwater
+```
 
 ## Compatibility
 

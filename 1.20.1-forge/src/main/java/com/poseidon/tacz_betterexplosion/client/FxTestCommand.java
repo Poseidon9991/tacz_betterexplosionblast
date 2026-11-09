@@ -26,10 +26,11 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 /**
- * {@code /betterexplosion test <tier> [count]}: the client-side dev command behind the section-7
+ * {@code /betterexplosion test <tier> [count] [underwater]}: the client-side dev command behind the section-7
  * acceptance checks. Spawns {@code count} explosions (default 1, at most 50) of the tier's midpoint
  * radius at the look target, each through the same {@link ClientFxHandler#handle} path the fx packet
- * takes, then prints particles spawned, the median handler time and the peak live count in one chat line.
+ * takes (with {@link ExplosionFx#FLAG_UNDERWATER} set when {@code underwater} is given), then prints
+ * particles spawned, the median handler time and the peak live count in one chat line.
  */
 public final class FxTestCommand {
 
@@ -44,6 +45,9 @@ public final class FxTestCommand {
     /** Tier names offered as suggestions for the {@code tier} argument. */
     private static final List<String> TIER_NAMES =
             Arrays.stream(ExplosionTier.values()).map(Enum::name).toList();
+
+    /** Optional trailing literal that sends the explosions with {@link ExplosionFx#FLAG_UNDERWATER}. */
+    private static final String UNDERWATER_LITERAL = "underwater";
 
     /** Blocks ahead of the camera when the crosshair is not on a block. */
     private static final double FALLBACK_DISTANCE = 8.0;
@@ -60,13 +64,18 @@ public final class FxTestCommand {
                         .then(Commands.argument("tier", StringArgumentType.word())
                                 .suggests((context, builder) ->
                                         SharedSuggestionProvider.suggest(TIER_NAMES, builder))
-                                .executes(context -> run(context, 1))
+                                .executes(context -> run(context, 1, false))
+                                .then(Commands.literal(UNDERWATER_LITERAL)
+                                        .executes(context -> run(context, 1, true)))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1, 50))
                                         .executes(context -> run(context,
-                                                IntegerArgumentType.getInteger(context, "count")))))));
+                                                IntegerArgumentType.getInteger(context, "count"), false))
+                                        .then(Commands.literal(UNDERWATER_LITERAL)
+                                                .executes(context -> run(context,
+                                                        IntegerArgumentType.getInteger(context, "count"), true)))))));
     }
 
-    private static int run(CommandContext<CommandSourceStack> context, int count) {
+    private static int run(CommandContext<CommandSourceStack> context, int count, boolean underwater) {
         String tierName = StringArgumentType.getString(context, "tier");
         ExplosionTier tier;
         try {
@@ -87,9 +96,10 @@ public final class FxTestCommand {
         Vec3 pos = target(mc);
         float radius = TEST_RADII.get(tier);
         FxState.resetStats();
+        byte flags = underwater ? ExplosionFx.FLAG_UNDERWATER : 0;
         long[] nanos = new long[count];
         for (int i = 0; i < count; i++) {
-            ExplosionFx fx = new ExplosionFx(pos.x, pos.y, pos.z, radius, (byte) 0, new Random().nextInt());
+            ExplosionFx fx = new ExplosionFx(pos.x, pos.y, pos.z, radius, flags, new Random().nextInt());
             long start = System.nanoTime();
             ClientFxHandler.handle(fx);
             nanos[i] = System.nanoTime() - start;
@@ -98,6 +108,9 @@ public final class FxTestCommand {
         String message = String.format(Locale.ROOT,
                 "[BetterExplosion] %s x%d: spawned=%d, handler median=%.2fms, peak live=%d",
                 tier.name(), count, FxState.spawnedTotal(), median(nanos) / 1.0e6, FxState.peakLive());
+        if (underwater) {
+            message += " (underwater)";
+        }
         if (mc.player != null) {
             mc.player.displayClientMessage(Component.literal(message), false);
         } else {

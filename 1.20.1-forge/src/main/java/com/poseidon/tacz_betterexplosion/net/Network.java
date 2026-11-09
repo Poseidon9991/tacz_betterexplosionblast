@@ -28,7 +28,8 @@ public final class Network {
     private static final String PROTOCOL = "1";
 
     // The (namespace, path) constructor is flagged for removal in Forge 47.4.0 but works on every 1.20.1 build;
-    // fromNamespaceAndPath may be missing on the older Forge 47.x builds the mod range still admits.
+    // fromNamespaceAndPath needs a newer Forge 47.x and OptiFine strips it, so it is avoided even though the
+    // mod range ([47.4.0,)) would admit it.
     @SuppressWarnings("removal")
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(TaczBetterExplosion.MOD_ID, "main"),
