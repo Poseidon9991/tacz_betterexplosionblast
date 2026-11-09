@@ -139,12 +139,15 @@ def smoke_volumetric(seed, radius_x, radius_y, base_freq, warp_amp, warp_freq, e
                      wispy, tall, lum_lo, lum_hi, ao_depth):
     """128x128 volumetric smoke from domain-warped fractal noise — no discs, no rim highlights.
 
-    Alpha: an elliptical radial envelope (solid 1.0 core, smoothstep falloff over the outer
-    ~22 percent only) whose edge radius is modulated +/-edge_mod by ridged billow noise, so the
-    silhouette swirls like turbulent smoke. Luminance: gentle directional light (lit upper-left
-    ~0.95 to shaded lower-right ~0.55) times (lum_lo + (lum_hi - lum_lo) * detail) where detail
-    is a second warped fBm, darkened further in the deep valleys of the billow noise (ambient
-    occlusion). `tall` stretches the noise vertically for the plume variant."""
+    Alpha: an elliptical radial envelope (smoothstep falloff over the outer ~30 percent) whose edge
+    radius is modulated +/-edge_mod by ridged billow noise, so the silhouette swirls like turbulent
+    smoke. The envelope is then multiplied by (0.62 + 0.38 * interior) where interior is a second,
+    higher-frequency fBm layer on the same warped coordinates, so overlapping quads blend into one
+    textured volume instead of stacking solid discs; a small core floor keeps the very thickest
+    centre pixels near alpha 1.0. Luminance: gentle directional light (lit upper-left ~0.95 to
+    shaded lower-right ~0.55) times (lum_lo + (lum_hi - lum_lo) * detail) where detail is another
+    warped fBm, darkened further in the deep valleys of the billow noise (ambient occlusion).
+    `tall` stretches the noise vertically for the plume variant."""
     size = SMOKE_SIZE
     billow_seed = seed + 101
     detail_seed = seed + 307
@@ -161,9 +164,13 @@ def smoke_volumetric(seed, radius_x, radius_y, base_freq, warp_amp, warp_freq, e
         n = fbm(wu * base_freq + 11.0, nv * base_freq - 7.0, billow_seed, 5)
         billow = 1.0 - abs(2.0 * n - 1.0)
         t = math.hypot(u / radius_x, v / radius_y) / (1.0 + (billow - 0.5) * 2.0 * edge_mod)
-        alpha = 1.0 - smoothstep(0.78, 1.0, t)
+        alpha = 1.0 - smoothstep(0.70, 1.0, t)
         if alpha <= 0.0:
             return 0.75, 0.0
+        interior = fbm(wu * base_freq * 2.7 + 47.0, nv * base_freq * 2.7 - 13.0, detail_seed + 17, 3)
+        interior = clamp01((interior - 0.5) * 1.8 + 0.5)
+        interior = max(interior, 1.0 - smoothstep(0.10, 0.35, t))
+        alpha *= 0.62 + 0.38 * interior
         if wispy:
             veil = fbm(wu * base_freq * 2.3 + 40.0, nv * base_freq * 2.3 + 3.0, detail_seed, 3)
             alpha *= 0.95 + 0.05 * veil
@@ -337,18 +344,20 @@ def assert_streak(name, image):
 
 
 def assert_smoke(name, image):
-    """Volumetric-smoke rules: opaque centre, dense inner half, shaded luminance range, no specular."""
+    """Volumetric-smoke rules: near-opaque centre, dense but interior-broken inner half, shaded
+    luminance range, no specular."""
     size = image.size[0]
     alpha = image.getchannel("A")
     lum = image.getchannel("R")
     centre = alpha.getpixel((size // 2, size // 2)) / 255.0
-    assert centre >= 0.95, name + ": centre alpha {:.2f} below 0.95".format(centre)
+    assert centre >= 0.9, name + ": centre alpha {:.2f} below 0.9".format(centre)
     for cx in (0, size - 1):
         for cy in (0, size - 1):
             assert alpha.getpixel((cx, cy)) == 0, name + ": corner not transparent"
     half = size // 4
     total = 0
     alpha_sum = 0.0
+    alpha_sq_sum = 0.0
     min_lum = 1.0
     max_lum = 0.0
     white = 0
@@ -357,6 +366,7 @@ def assert_smoke(name, image):
             a = alpha.getpixel((x, y)) / 255.0
             total += 1
             alpha_sum += a
+            alpha_sq_sum += a * a
     for y in range(size):
         for x in range(size):
             a = alpha.getpixel((x, y)) / 255.0
@@ -367,7 +377,9 @@ def assert_smoke(name, image):
                 if l >= 0.998 and a > 0.5:
                     white += 1
     mean_alpha = alpha_sum / total
-    assert mean_alpha >= 0.85, name + ": inner mean alpha {:.3f} below 0.85".format(mean_alpha)
+    alpha_sd = math.sqrt(max(0.0, alpha_sq_sum / total - mean_alpha * mean_alpha))
+    assert mean_alpha >= 0.6, name + ": inner mean alpha {:.3f} below 0.6".format(mean_alpha)
+    assert alpha_sd >= 0.08, name + ": inner alpha stddev {:.3f} below 0.08 (no interior breakup)".format(alpha_sd)
     assert min_lum <= 0.55 and max_lum >= 0.9, (
         name + ": luminance range {:.3f}..{:.3f} outside 0.55..0.9".format(min_lum, max_lum))
     assert white <= 4, name + ": {} saturated-white pixels (specular)".format(white)

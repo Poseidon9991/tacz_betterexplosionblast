@@ -297,9 +297,9 @@ public final class ExplosionVfx {
 
     /**
      * Ground dust shock ring (air blasts only): {@code n} puffs evenly spaced on a circle of radius
-     * {@code 0.25R} around the centre, racing outward along the floor. Angles jitter by at most ±0.3 of a
+     * {@code 0.35R} around the centre, racing outward along the floor. Angles jitter by at most ±0.3 of a
      * slot and speeds by ±10 percent so the ring stays readable. Same ground tint as the cloud; each puff
-     * runs in {@code PuffParticle}'s ground-dust mode. Lifetime 24..39 ticks.
+     * runs in {@code PuffParticle}'s ground-dust mode. Lifetime 30..50 ticks.
      */
     private static int spawnDustRing(
             ParticleEngine engine,
@@ -311,14 +311,14 @@ public final class ExplosionVfx {
             double angle = Mth.TWO_PI * (i + (rand.nextDouble() - 0.5) * 0.6) / n;
             double cos = Math.cos(angle);
             double sin = Math.sin(angle);
-            double startRadius = 0.25 * r;
-            double speed = 0.10 * r * (0.9 + rand.nextDouble() * 0.2);
+            double startRadius = 0.35 * r;
+            double speed = 0.16 * r * (0.9 + rand.nextDouble() * 0.2);
             Particle p = create(
                     engine, ModParticles.SMOKE_PUFF.get(),
-                    cx + cos * startRadius, groundY + 0.15 + rand.nextDouble() * 0.2, cz + sin * startRadius,
+                    cx + cos * startRadius, groundY + 0.2 + rand.nextDouble() * 0.3, cz + sin * startRadius,
                     cos * speed, 0.004 + rand.nextDouble() * 0.004, sin * speed,
-                    r * (0.32F + rand.nextFloat() * 0.2F) * factor,
-                    24 + rand.nextInt(16));
+                    r * (0.45F + rand.nextFloat() * 0.25F) * factor,
+                    30 + rand.nextInt(21));
             if (p instanceof PuffParticle puff) {
                 puff.setTint(tint[0], tint[1], tint[2]);
                 puff.setGroundDust();

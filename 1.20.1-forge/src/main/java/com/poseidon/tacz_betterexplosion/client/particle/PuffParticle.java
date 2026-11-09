@@ -17,18 +17,18 @@ import net.minecraft.util.Mth;
  * (1.0, 0.55, 0.12) at t=0.35, dark red (0.35, 0.05, 0.02) at t=1. Alpha 1 until t=0.45, then linear to 0.
  * Size {@code quadSize * (0.55 + 0.45 * easeOutCubic(t))}. Velocity {@code * 0.88} per tick, {@code yd += 0.004}.
  *
- * <p>SMOKE: translucent sheet, lifetime 70..140, light read once at spawn (the only world access). Colour
+ * <p>SMOKE: translucent sheet, lifetime 50..95, light read once at spawn (the only world access). Colour
  * piecewise linear from warm ember-brown (0.55, 0.38, 0.25) at t=0 to grey (0.36, 0.35, 0.34) at t=0.2,
  * (0.16, 0.16, 0.16) at t=0.65 and (0.09, 0.09, 0.09) at t=1, times a per-particle brightness in
- * [0.85, 1.15]. Alpha ramps 0 to 0.95 over t in [0, 0.05], holds until t=0.65, then falls linearly to 0
- * over t in [0.65, 1]. Size {@code quadSize * (0.6 + 0.8 * easeOutQuad(t))} (billowing growth). The quad spins slowly
+ * [0.85, 1.15]. Alpha ramps 0 to 0.88 over t in [0, 0.05], holds until t=0.6, then falls linearly to 0
+ * over t in [0.6, 1]. Size {@code quadSize * (0.6 + 0.8 * easeOutQuad(t))} (billowing growth). The quad spins slowly
  * ({@code roll} changes by up to 0.04 rad per tick, random sign and magnitude, from a random start angle).
  * Velocity {@code * 0.965} per tick, {@code yd >= 0.010} until t=0.85, plus turbulence
  * {@code 0.006 * sin(0.30 * age + phase) + 0.003 * sin(0.77 * age + phase2)} on {@code xd} and the cosine of
  * the same angles on {@code zd}.
  *
  * <p>{@link #setGroundDust} switches a SMOKE puff into ground-dust mode (the shock-ring puffs): horizontal
- * damping 0.93 per tick, constant {@code yd = 0.004} (no rise floor, no turbulence), size
+ * damping 0.94 per tick, constant {@code yd = 0.004} (no rise floor, no turbulence), size
  * {@code quadSize * (0.7 + 0.8 * easeOutQuad(t))} (low, flat, wide growth) and alpha ramping 0 to 0.8 over
  * t in [0, 0.08], holding until t=0.5, then linear to 0. Colour and spin are unchanged.
  */
@@ -42,8 +42,8 @@ public final class PuffParticle extends FxParticle {
 
     private static final int FIRE_MIN_LIFETIME = 10;
     private static final int FIRE_LIFETIME_SPREAD = 17;
-    private static final int SMOKE_MIN_LIFETIME = 70;
-    private static final int SMOKE_LIFETIME_SPREAD = 71;
+    private static final int SMOKE_MIN_LIFETIME = 50;
+    private static final int SMOKE_LIFETIME_SPREAD = 46;
 
     private static final float FIRE_ORANGE_AT = 0.35F;
     private static final float FIRE_ALPHA_HOLD = 0.45F;
@@ -53,13 +53,13 @@ public final class PuffParticle extends FxParticle {
     private static final float SMOKE_GREY_AT = 0.2F;
     private static final float SMOKE_DARK_AT = 0.65F;
     private static final float SMOKE_FADE_IN_END = 0.05F;
-    private static final float SMOKE_FADE_OUT_START = 0.65F;
-    private static final float SMOKE_MAX_ALPHA = 0.95F;
+    private static final float SMOKE_FADE_OUT_START = 0.6F;
+    private static final float SMOKE_MAX_ALPHA = 0.88F;
     private static final float SMOKE_DAMPING = 0.965F;
     private static final float GROUND_DUST_FADE_IN_END = 0.08F;
     private static final float GROUND_DUST_FADE_OUT_START = 0.5F;
     private static final float GROUND_DUST_MAX_ALPHA = 0.8F;
-    private static final float GROUND_DUST_DAMPING = 0.93F;
+    private static final float GROUND_DUST_DAMPING = 0.94F;
     private static final float GROUND_DUST_RISE = 0.004F;
     private static final float SMOKE_MIN_RISE = 0.010F;
     private static final float SMOKE_RISE_UNTIL = 0.85F;
