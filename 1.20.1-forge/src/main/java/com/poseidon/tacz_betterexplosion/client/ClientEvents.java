@@ -7,6 +7,7 @@ import com.poseidon.tacz_betterexplosion.client.fx.ScreenShake;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.TickEvent;
@@ -40,6 +41,12 @@ public final class ClientEvents {
         if (event.getLevel() instanceof Level level && level.isClientSide()) {
             clearFxState();
         }
+    }
+
+    /** Registers the client-side fx test command when the client command dispatcher is built. */
+    @SubscribeEvent
+    public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
+        FxTestCommand.register(event.getDispatcher());
     }
 
     /** Adds the screen shake to the camera angles every frame. */

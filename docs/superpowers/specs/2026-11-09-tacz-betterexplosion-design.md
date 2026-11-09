@@ -234,7 +234,8 @@ direct hit stacking; with TaCZ Tweaks installed; `/betterexplosion test` budgets
 - **M1 (v0.1.0)**: hook, `BlockPass`, `DamageModel` and `DamagePass`, both configs, packet and a basic client effect
   (vanilla explosion particle plus vanilla explode sound through our packet, so explosions are not silent after TaCZ's
   packet is cancelled), unit tests, `mods.toml` range fix.
-- **M2**: the full layered effects, sound, shake, throttles, `/betterexplosion test`, generated textures.
+- **M2 (v0.2.0, implemented — pending the author's in-game gate)**: the full layered effects, sound, shake,
+  throttles, `/betterexplosion test`, generated textures.
 - **M3**: underwater variant, LOD tuning from measurements, TaCZ Tweaks player-damage compat.
 
 ## 12. Risks
