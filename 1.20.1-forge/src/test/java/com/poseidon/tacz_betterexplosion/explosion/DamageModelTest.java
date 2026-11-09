@@ -78,6 +78,28 @@ class DamageModelTest {
     }
 
     @Test
+    void negativeOrNaNMultipliersGiveZero() {
+        double factor = DamageModel.blastFactor(R, 1, 1, P);
+        assertTrue(factor > 0.0);
+        for (double bad : new double[] {-1.0, -0.5, Double.NaN, Double.NEGATIVE_INFINITY}) {
+            DamageModel.Params badDamage = new DamageModel.Params(2.0, 0.25, bad, 1.0);
+            double damage = DamageModel.damage(D, factor, badDamage);
+            assertEquals(0.0, damage, 0.0, "damage for damageMultiplier " + bad);
+            assertTrue(damage >= 0.0, "damage must not be negative for damageMultiplier " + bad);
+
+            DamageModel.Params badKnockback = new DamageModel.Params(2.0, 0.25, 1.0, bad);
+            double knockback = DamageModel.knockback(D, R, factor, badKnockback);
+            assertEquals(0.0, knockback, 0.0, "knockback for knockbackMultiplier " + bad);
+            assertTrue(knockback >= 0.0, "knockback must not be negative for knockbackMultiplier " + bad);
+        }
+        // A bad multiplier on one axis leaves the other untouched.
+        DamageModel.Params badDamageOnly = new DamageModel.Params(2.0, 0.25, -1.0, 1.0);
+        assertEquals(0.6, DamageModel.knockback(30, 5, 1.0, badDamageOnly), 1e-9);
+        DamageModel.Params badKnockbackOnly = new DamageModel.Params(2.0, 0.25, 1.0, Double.NaN);
+        assertEquals(30.0, DamageModel.damage(D, 1.0, badKnockbackOnly), 1e-9);
+    }
+
+    @Test
     void zeroDirectionIsZeroVector() {
         assertArrayEquals(new double[] {0, 0, 0}, DamageModel.direction(0, 0, 0), 0.0);
         assertArrayEquals(new double[] {0, 0, 0}, DamageModel.direction(1e-9, 0, 0), 0.0);

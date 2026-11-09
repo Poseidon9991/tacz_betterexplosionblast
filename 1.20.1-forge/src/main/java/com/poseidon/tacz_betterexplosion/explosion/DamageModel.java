@@ -2,7 +2,8 @@ package com.poseidon.tacz_betterexplosion.explosion;
 
 /**
  * Pure explosion maths with no Minecraft types. Any NaN, non-positive radius or non-positive
- * damage input yields 0, so callers never see NaN or an exception from bad data.
+ * damage input yields 0, so callers never see NaN or an exception from bad data. A negative or NaN
+ * damage or knockback multiplier counts as 0.
  *
  * <pre>
  * reach  = radius * reachMultiplier
@@ -21,8 +22,8 @@ public final class DamageModel {
     /**
      * @param reachMultiplier     blast reach as a multiple of the explosion radius
      * @param coverFloor          fraction of the blast that always gets through cover, in [0, 1]
-     * @param damageMultiplier    scales the final damage
-     * @param knockbackMultiplier scales the final knockback
+     * @param damageMultiplier    scales the final damage; negative or NaN counts as 0
+     * @param knockbackMultiplier scales the final knockback; negative or NaN counts as 0
      */
     public record Params(double reachMultiplier, double coverFloor, double damageMultiplier,
                          double knockbackMultiplier) {
@@ -60,7 +61,7 @@ public final class DamageModel {
             return 0.0;
         }
         double factor = clamp01(blastFactor);
-        return finiteOrZero(damage * p.damageMultiplier() * (factor * factor + factor) / 2.0);
+        return finiteOrZero(damage * nonNegative(p.damageMultiplier()) * (factor * factor + factor) / 2.0);
     }
 
     /** Knockback magnitude for a blast factor (after any enchantment dampening by the caller). */
@@ -68,7 +69,8 @@ public final class DamageModel {
         if (!(damage > 0.0) || !Double.isFinite(damage) || !(radius > 0.0) || !(blastFactor > 0.0)) {
             return 0.0;
         }
-        return finiteOrZero(damage * (2.0 * radius) / 500.0 * clamp01(blastFactor) * p.knockbackMultiplier());
+        return finiteOrZero(damage * (2.0 * radius) / 500.0 * clamp01(blastFactor)
+                * nonNegative(p.knockbackMultiplier()));
     }
 
     /** Unit vector of (dx, dy, dz), or {0, 0, 0} when the length is below 1e-6 or not finite. */
@@ -82,6 +84,11 @@ public final class DamageModel {
 
     private static double clamp01(double value) {
         return value < 0.0 ? 0.0 : Math.min(value, 1.0);
+    }
+
+    /** The value itself, or 0 when it is negative or NaN. */
+    private static double nonNegative(double value) {
+        return value > 0.0 ? value : 0.0;
     }
 
     private static double finiteOrZero(double value) {

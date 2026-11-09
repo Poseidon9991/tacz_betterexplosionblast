@@ -61,9 +61,10 @@ Explosions are classed by radius into tiers, each with a HIGH-quality particle b
 
 `/betterexplosion test <tier> [count]` (client command, `count` 1–50, default 1) spawns explosions at the look target through the real effect path and reports particles spawned, the median handler time and the peak live count — a dev/perf check for the budgets above.
 
-## Known gap
+## Compatibility
 
-TaCZ Tweaks' explosion player-damage modifier does not apply to this mod's explosion damage.
+- **TaCZ Tweaks:** its explosion player-damage modifier is applied to the damage players take from this mod's explosions, as Tweaks does for TaCZ's own. This is a reflective soft compat: nothing happens when Tweaks is absent, and if Tweaks' internals change, the compat logs one warning and turns itself off (damage stays unmodified).
+- **TACZ Attributes:** nothing needed, its modified values arrive already applied.
 
 ## Requirements
 

@@ -1,5 +1,6 @@
 package com.poseidon.tacz_betterexplosion.explosion;
 
+import com.poseidon.tacz_betterexplosion.compat.TweaksCompat;
 import com.poseidon.tacz_betterexplosion.config.ServerConfig;
 import com.tacz.guns.config.common.AmmoConfig;
 import net.minecraft.server.level.ServerLevel;
@@ -17,7 +18,11 @@ import net.minecraftforge.event.ForgeEventFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Hurts and knocks back entities with {@link DamageModel}; TaCZ's own entity damage is switched off by {@link BlockPass}. */
+/**
+ * Hurts and knocks back entities with {@link DamageModel}; TaCZ's own entity damage is switched off by
+ * {@link BlockPass}. Like TaCZ's {@code ProjectileExplosion.explode()}, any entity that is not a spectator
+ * is knocked back (not only living ones); dampening by enchantments applies to living entities only.
+ */
 public final class DamagePass {
 
     private DamagePass() {
@@ -41,11 +46,13 @@ public final class DamagePass {
         // Carrier only: lets claim and protection mods trim the target list through the Detonate event.
         ForgeEventFactory.onExplosionDetonate(level, new DamageExplosion(ctx, source), candidates, reach * 2.0);
 
-        List<Entity> targets = Targets.nearest(candidates, entity -> distanceTo(pos, entity), ServerConfig.maxTargets());
+        List<Targets.Ranked<Entity>> targets = Targets.rankedNearest(candidates, entity -> distanceTo(pos, entity),
+                ServerConfig.maxTargets());
 
         boolean knockbackEnabled = ctx.knockback() && AmmoConfig.EXPLOSIVE_AMMO_KNOCK_BACK.get();
-        for (Entity entity : targets) {
-            double distance = distanceTo(pos, entity);
+        for (Targets.Ranked<Entity> target : targets) {
+            Entity entity = target.item();
+            double distance = target.distance();
             double seen = Explosion.getSeenPercent(pos, entity);
             double p = DamageModel.blastFactor(ctx.radius(), distance, seen, params);
             if (p <= 0.0) {
@@ -54,13 +61,17 @@ public final class DamagePass {
 
             float amount = (float) DamageModel.damage(ctx.damage(), p, params);
             if (amount > 0.0f) {
+                if (entity instanceof Player) {
+                    // Same as TaCZ Tweaks' wrapper around TaCZ's hurt call: players only.
+                    amount = TweaksCompat.playerDamage(amount);
+                }
                 // Direct hits: the bullet's own hit must not shield the target from the explosion.
                 entity.invulnerableTime = 0;
                 entity.hurt(source, amount);
             }
 
-            if (knockbackEnabled && entity instanceof LivingEntity living && canBePushed(living)) {
-                applyKnockback(ctx, params, living, p);
+            if (knockbackEnabled && canBePushed(entity)) {
+                applyKnockback(ctx, params, entity, p);
             }
         }
     }
@@ -70,27 +81,36 @@ public final class DamagePass {
         return Math.sqrt(entity.getBoundingBox().distanceToSqr(pos));
     }
 
-    private static boolean canBePushed(LivingEntity living) {
-        if (living instanceof Player player) {
-            return !player.isSpectator() && !(player.isCreative() && player.getAbilities().flying);
+    private static boolean canBePushed(Entity entity) {
+        if (entity.isSpectator()) {
+            return false;
+        }
+        if (entity instanceof Player player) {
+            return !(player.isCreative() && player.getAbilities().flying);
         }
         return true;
     }
 
-    private static void applyKnockback(ExplosionContext ctx, DamageModel.Params params, LivingEntity living,
+    private static void applyKnockback(ExplosionContext ctx, DamageModel.Params params, Entity entity,
                                        double blastFactor) {
         Vec3 pos = ctx.pos();
-        Vec3 centre = living.getBoundingBox().getCenter();
+        Vec3 centre = entity.getBoundingBox().getCenter();
         double[] direction = DamageModel.direction(centre.x - pos.x, centre.y - pos.y, centre.z - pos.z);
         if (direction[0] == 0.0 && direction[1] == 0.0 && direction[2] == 0.0) {
             return;
         }
-        double dampened = ProtectionEnchantment.getExplosionKnockbackAfterDampener(living, blastFactor);
+        double dampened = entity instanceof LivingEntity living
+                ? ProtectionEnchantment.getExplosionKnockbackAfterDampener(living, blastFactor)
+                : blastFactor;
         double magnitude = DamageModel.knockback(ctx.damage(), ctx.radius(), dampened, params);
-        living.setDeltaMovement(living.getDeltaMovement()
+        if (!(magnitude > 0.0)) {
+            // Zero (or NaN) push: leave the motion alone and do not resync the entity.
+            return;
+        }
+        entity.setDeltaMovement(entity.getDeltaMovement()
                 .add(direction[0] * magnitude, direction[1] * magnitude, direction[2] * magnitude));
-        if (living instanceof ServerPlayer) {
-            living.hurtMarked = true;
+        if (entity instanceof ServerPlayer) {
+            entity.hurtMarked = true;
         }
     }
 

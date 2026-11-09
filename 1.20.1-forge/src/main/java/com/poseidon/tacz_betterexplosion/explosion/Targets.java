@@ -11,25 +11,43 @@ public final class Targets {
     private Targets() {
     }
 
+    /** An item together with the distance it was ranked by. */
+    public record Ranked<T>(T item, double distance) {
+    }
+
     /**
-     * The {@code max} items closest to the centre, in ascending distance order. Items at equal
-     * distance keep their input order. The distance function is called once per item.
+     * The {@code max} items closest to the centre, in ascending distance order; see
+     * {@link #rankedNearest} for the rules.
      */
     public static <T> List<T> nearest(List<T> items, ToDoubleFunction<T> distance, int max) {
+        List<Ranked<T>> ranked = rankedNearest(items, distance, max);
+        List<T> result = new ArrayList<>(ranked.size());
+        for (Ranked<T> entry : ranked) {
+            result.add(entry.item());
+        }
+        return result;
+    }
+
+    /**
+     * Like {@link #nearest} but keeps each item's distance, so callers need not recompute it.
+     * The distance function is called once per item. Items whose distance is NaN are excluded
+     * (they have no defined rank and must not fill free slots). A {@code max} of 0 or less
+     * gives an empty list. Items at equal distance (0.0 and -0.0 count as equal) keep their
+     * input order.
+     */
+    public static <T> List<Ranked<T>> rankedNearest(List<T> items, ToDoubleFunction<T> distance, int max) {
         if (max <= 0 || items.isEmpty()) {
             return new ArrayList<>();
         }
-        record Entry<E>(E item, double distance) {
-        }
-        List<Entry<T>> entries = new ArrayList<>(items.size());
+        List<Ranked<T>> entries = new ArrayList<>(items.size());
         for (T item : items) {
-            entries.add(new Entry<>(item, distance.applyAsDouble(item)));
+            double d = distance.applyAsDouble(item);
+            if (!Double.isNaN(d)) {
+                entries.add(new Ranked<>(item, d));
+            }
         }
-        entries.sort(Comparator.comparingDouble(Entry::distance));
-        List<T> result = new ArrayList<>(Math.min(max, entries.size()));
-        for (int i = 0; i < entries.size() && i < max; i++) {
-            result.add(entries.get(i).item());
-        }
-        return result;
+        // Adding 0.0 turns -0.0 into 0.0 so the two tie; List.sort is stable.
+        entries.sort(Comparator.comparingDouble(entry -> entry.distance() + 0.0));
+        return entries.size() > max ? new ArrayList<>(entries.subList(0, max)) : entries;
     }
 }

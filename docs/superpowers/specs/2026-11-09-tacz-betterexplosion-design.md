@@ -45,7 +45,7 @@ source (LGPL-3.0 / GPL-3.0, studied only; no SBW code or assets are copied).
   (about 290 for LARGE and 345 for HUGE, counted from its presets, 150 of them just the shock ring), random per-explosion
   scale, distance-tiered sounds, screen shake.
 - Other mods in the target pack: TaCZ Tweaks wraps `Entity.hurt` inside `ProjectileExplosion.explode()` for a
-  player-damage modifier (our damage pass bypasses it); TACZ Attributes modifies bullet explosion fields before the
+  player-damage modifier (our damage pass bypasses it, so `TweaksCompat` re-applies it, see section 5); TACZ Attributes modifies bullet explosion fields before the
   hook, so we receive modified values.
 
 ## 3. Scope
@@ -123,9 +123,15 @@ Rules:
 - Invulnerability: set `invulnerableTime = 0` before `hurt`, so a direct hit is bullet damage plus the full explosion.
 - Knockback applies only when `knockback` (gunpack flag) and `AmmoConfig.EXPLOSIVE_AMMO_KNOCK_BACK` are both true.
   Direction is centre to target bounding-box centre. Magnitude is `D * (2R) / 500 * p' * knockbackMultiplier`, where `p'`
-  is `p` after `ProtectionEnchantment.getExplosionKnockbackAfterDampener`. Skipped for spectators and flying creative
-  players; players get `hurtMarked = true` for velocity sync.
-- Known gap: TaCZ Tweaks' explosion player-damage modifier does not apply to this damage (milestone 3).
+  is `p` after `ProtectionEnchantment.getExplosionKnockbackAfterDampener` (living entities only). As in TaCZ's
+  `ProjectileExplosion.explode()`, which pushes any `Entity`, knockback applies to every entity that is not a spectator,
+  not only living ones; flying creative players are skipped; players get `hurtMarked = true` for velocity sync, and a
+  zero push changes nothing. Entity distance is computed once per target. A negative or NaN `damageMultiplier` or
+  `knockbackMultiplier` counts as 0, and targets with a NaN distance are dropped.
+- TaCZ Tweaks: applied when TaCZ Tweaks is installed (reflective soft compat). For `Player` targets only, after the
+  model damage is computed and before `hurt`, `TweaksCompat.playerDamage` evaluates Tweaks' player-damage modifier
+  (`Config$Modifiers$PlayerDamage.INSTANCE.toTaCZ()` through `AttachmentPropertyManager.eval`), read on every call.
+  Resolution is lazy and once; any failure logs one warning and disables the compat, leaving damage unmodified.
 
 ## 6. Effects (client)
 
@@ -215,7 +221,8 @@ Client (`tacz_betterexplosion-client.toml`): `quality` (HIGH), `maxLiveParticles
 - Forge events: `ExplosionEvent.Start` is honoured (cancel means no explosion at all, as in TaCZ); Detonate is posted for
   both the block pass and the damage pass.
 - TACZ Attributes: no work needed, values arrive already modified.
-- TaCZ Tweaks: explosion player-damage modifier not applied (known gap, milestone 3).
+- TaCZ Tweaks: applied when TaCZ Tweaks is installed (reflective soft compat, no compile dependency; on any reflection
+  failure it logs once and disables itself).
 - Dedicated server: client classes are never loaded. A unit test (`DistSafetyTest`) scans the sources and fails if any
   `net.minecraft.client`, `com.mojang.blaze3d` or `net.minecraftforge.client` import appears outside the `client`
   package; the author also boots a real dedicated server with TaCZ and the jar at each milestone gate (the dev
