@@ -2,7 +2,7 @@
 
 Forge 1.20.1 addon for Timeless and Classics Zero (TaCZ) that improves explosions caused by TaCZ guns and projectiles.
 
-v0.2.0: cover-aware explosion damage plus the full client effect — layered particles, distance-banded sound, screen shake and flash, all with performance throttles.
+v0.2.1: cover-aware explosion damage plus the full client effect — layered particles, distance-banded sound, screen shake and flash, all with performance throttles. 0.2.1 is a visual tuning round: no shock ring, longer flash and smoke, scattered ground dust, and shrapnel streaks.
 
 ## How it works
 
@@ -13,7 +13,7 @@ TaCZ creates every explosive-round explosion through `ExplodeUtil.createExplosio
 3. The blocks are destroyed.
 4. A small packet tells players near the blast to play the effect.
 
-On the client the packet drives a layered effect built from the tier's particle budget: flash, fireball, shock ring, smoke stem, dust, debris and sparks. The sound is layered too — close, mid and far bands picked by distance and delayed by distance to simulate travel time. Screen shake scales with tier and proximity, and a white flash fires when the blast is close.
+On the client the packet drives a layered effect built from the tier's particle budget: flash (core plus halo, about 6 ticks), fireball, long-lived billowing smoke stem, a scattered low dust cloud tinted by the ground block, debris, sparks and fast shrapnel streaks. The sound is layered too — close, mid and far bands picked by distance and delayed by distance to simulate travel time. Screen shake scales with tier and proximity, and a longer white flash fires when the blast is close.
 
 Budgets are throttled client-side: a global live-particle cap, a burst penalty for rapid consecutive explosions, an optional fps-based cut, distance culling (far explosions drop to flash, stem and sound; beyond the tier's range only sound), and the vanilla Particles setting is honoured.
 

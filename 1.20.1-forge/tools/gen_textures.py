@@ -169,50 +169,140 @@ def flash():
     return build(size, size, pixel)
 
 
-def ring():
-    """Thin soft ring at 0.9 of the half-width, gaussian cross-section, sigma 0.028 (about 6.6 percent FWHM)."""
-    size = 128
-    ring_radius = 0.9
-    sigma = 0.028
-
-    def pixel(x, y):
-        u, v = unit_coords(x, y, size, size)
-        r = math.hypot(u, v)
-        profile = math.exp(-(((r - ring_radius) / sigma) ** 2) * 0.5)
-        modulation = fbm(u * 4.0 + 30.0, v * 4.0 + 30.0, 31, 3)
-        alpha = profile * (0.85 + 0.15 * modulation) * edge_window(x, y, size, size, 3)
-        return 1.0, alpha
-
-    return build(size, size, pixel)
+def warp(u, v, seed, amplitude, frequency):
+    """Domain warp: shifts (u, v) by two independent smooth noise fields."""
+    du = fbm(u * frequency + 7.1, v * frequency + 3.3, seed, 2) - 0.5
+    dv = fbm(u * frequency + 1.7, v * frequency + 9.2, seed + 7, 2) - 0.5
+    return u + amplitude * du, v + amplitude * dv
 
 
-def spark():
-    """Vertical streak. HEAD = bottom of the image (rows near y = 63), TAIL fades to nothing at the top."""
+def soft_disc(r, inner, outer):
+    """1 inside `inner`, smoothly 0 at `outer` (radii in unit coordinates); keeps the image border clear."""
+    return 1.0 - smoothstep(inner, outer, r)
+
+
+def normalised(size, raw, peak_alpha):
+    """Scales the alpha channel of `raw` (list of (lum, alpha), row-major) so that its maximum is `peak_alpha`."""
+    peak = max(a for _, a in raw)
+    scale = peak_alpha / peak if peak > 0.0 else 0.0
+    return build(size, size, lambda x, y: (raw[y * size + x][0], raw[y * size + x][1] * scale))
+
+
+def smoke_puff_b():
+    """Wispy smoke: low density, ragged lobes, warped detail with holes, max alpha 0.7."""
+    size = 64
+    raw = []
+    for y in range(size):
+        for x in range(size):
+            u, v = unit_coords(x, y, size, size)
+            wu, wv = warp(u, v, 41, 0.5, 1.6)
+            r = math.hypot(u, v)
+            lobes = fbm(wu * 2.6 + 15.0, wv * 2.6 + 15.0, 42, 3)
+            detail = fbm(wu * 6.0 + 40.0, wv * 6.0 + 40.0, 43, 3)
+            ragged = r + (lobes - 0.5) * 0.75
+            radial = 1.0 - smoothstep(0.0, 0.95, ragged)
+            wisp = 0.30 + 0.70 * smoothstep(0.32, 0.72, detail)
+            alpha = (radial ** 1.3) * wisp * soft_disc(r, 0.62, 1.0) * edge_window(x, y, size, size, 3)
+            lum = 0.80 + 0.20 * (0.5 * lobes + 0.5 * detail)
+            raw.append((lum, alpha))
+    return normalised(size, raw, 0.7)
+
+
+def smoke_puff_c():
+    """Dense billowy smoke: ridged billows; darker-looking lumps are encoded as lower luminance 0.55..0.85."""
+    size = 64
+    raw = []
+    for y in range(size):
+        for x in range(size):
+            u, v = unit_coords(x, y, size, size)
+            wu, wv = warp(u, v, 51, 0.25, 1.8)
+            r = math.hypot(u, v)
+            lobes = fbm(wu * 2.2 + 25.0, wv * 2.2 + 25.0, 52, 3)
+            billow = abs(2.0 * fbm(wu * 5.0 + 60.0, wv * 5.0 + 60.0, 53, 3) - 1.0)
+            fine = fbm(u * 8.0 + 80.0, v * 8.0 + 80.0, 54, 2)
+            ragged = r + (lobes - 0.5) * 0.40
+            dense = 1.0 - smoothstep(0.30, 0.92, ragged)
+            alpha = min(1.0, dense * 1.15) * (0.82 + 0.18 * fine) * soft_disc(r, 0.70, 1.0)
+            alpha *= edge_window(x, y, size, size, 3)
+            light = 0.5 * (1.0 - v) * 0.5 + 0.5 * (1.0 - u) * 0.25
+            lump = clamp01(0.85 * smoothstep(0.08, 0.55, billow) + 0.30 * light)
+            lum = 0.55 + 0.30 * lump
+            raw.append((lum, alpha))
+    return normalised(size, raw, 0.95)
+
+
+def fire_puff_b():
+    """Turbulent fireball puff: hot near-white core, warped ragged body, thin fringe."""
+    size = 64
+    raw = []
+    for y in range(size):
+        for x in range(size):
+            u, v = unit_coords(x, y, size, size)
+            wu, wv = warp(u, v, 61, 0.85, 2.2)
+            r = math.hypot(u, v)
+            turbulence = fbm(wu * 3.4 + 70.0, wv * 3.4 + 70.0, 62, 4)
+            ragged = r + (turbulence - 0.5) * 0.60
+            body = 1.0 - smoothstep(0.05, 0.85, ragged)
+            core = 1.0 - smoothstep(0.0, 0.30, ragged)
+            alpha = min(1.0, 0.85 * body * (0.70 + 0.30 * turbulence) + 0.45 * core)
+            alpha *= soft_disc(r, 0.55, 0.98) * edge_window(x, y, size, size, 3)
+            lum = 0.80 + 0.20 * core
+            raw.append((lum, alpha))
+    return normalised(size, raw, 1.0)
+
+
+def streak(core_half, halo_half, halo_alpha, tail_floor, tail_fade, power):
+    """16x64 vertical streak. HEAD = bottom of the image (rows near y = 63), TAIL = top.
+
+    Across: a hot core (alpha 1 for |u| <= core_half) plus a softer halo (alpha >= halo_alpha for
+    |u| <= halo_half), both in unit coordinates where |u| = 1 is the image edge. Along: `tail_floor` at the
+    tail rising to 1 at the head (power curve), the last `tail_fade` of the length fading to nothing, and a
+    soft rounded head. The outermost pixel ring is transparent.
+    """
     width = 16
     height = 64
     head = 0.90
 
     def pixel(x, y):
         u, _ = unit_coords(x, y, width, height)
+        a = abs(u)
         s = (y + 0.5) / height
-        across = math.exp(-((u / 0.35) ** 2))
+        core = 1.0 - smoothstep(core_half - 0.07, core_half + 0.07, a)
+        halo = (halo_alpha + 0.10) * (1.0 - smoothstep(halo_half - 0.15, 1.0, a))
+        across = min(1.0, core + halo)
         if s <= head:
-            along = (s / head) ** 2.2
+            along = tail_floor + (1.0 - tail_floor) * (s / head) ** power
+            if tail_fade > 0.0:
+                along *= smoothstep(0.0, tail_fade, s)
         else:
             along = 1.0 - smoothstep(head, 1.0, s)
         alpha = across * along * edge_window(x, y, width, height, 2)
-        lum = 0.85 + 0.15 * along
+        lum = 0.88 + 0.12 * core * along
         return lum, alpha
 
     return build(width, height, pixel)
 
 
+def spark():
+    """Slow ember streak: bright head, halo >= 0.3 alpha across 60 percent of the width, tail fades to nothing."""
+    return streak(core_half=0.22, halo_half=0.60, halo_alpha=0.32, tail_floor=0.0, tail_fade=0.0, power=1.4)
+
+
+def shrapnel():
+    """Very visible streak: hot core 35 percent wide (alpha >= 0.9), halo >= 0.35 across 70 percent of the
+    width, tail fading to about 0.25 at the top and only vanishing in the last few percent of the length."""
+    return streak(core_half=0.35, halo_half=0.70, halo_alpha=0.38, tail_floor=0.25, tail_fade=0.08, power=0.9)
+
+
 TEXTURES = {
     "fire_puff": (fire_puff, (64, 64)),
+    "fire_puff_b": (fire_puff_b, (64, 64)),
     "smoke_puff": (smoke_puff, (64, 64)),
+    "smoke_puff_b": (smoke_puff_b, (64, 64)),
+    "smoke_puff_c": (smoke_puff_c, (64, 64)),
     "flash": (flash, (64, 64)),
-    "ring": (ring, (128, 128)),
     "spark": (spark, (16, 64)),
+    "shrapnel": (shrapnel, (16, 64)),
 }
 
 
@@ -227,11 +317,25 @@ def assert_valid(name, image, size):
         assert alpha.getpixel((0, y)) == 0 and alpha.getpixel((width - 1, y)) == 0, name + ": border column"
 
 
+def assert_streak(name, image):
+    """Visibility rules of the streaks, read at a head row (y = 56) and along the centre column."""
+    alpha = image.getchannel("A")
+    head_row = [alpha.getpixel((x, 56)) / 255.0 for x in range(16)]
+    centre = [alpha.getpixel((8, y)) / 255.0 for y in range(64)]
+    if name == "shrapnel":
+        assert all(a >= 0.9 for a in head_row[5:11]), name + ": core below 0.9"
+        assert all(a >= 0.35 for a in head_row[2:14]), name + ": halo below 0.35"
+        assert all(a >= 0.1 for a in centre[3:59]), name + ": tail below the shader discard too early"
+    if name == "spark":
+        assert all(a >= 0.3 for a in head_row[3:13]), name + ": halo below 0.3"
+
+
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     for name, (factory, size) in TEXTURES.items():
         image = factory()
         assert_valid(name, image, size)
+        assert_streak(name, image)
         path = OUT_DIR / (name + ".png")
         image.save(path, format="PNG", optimize=False, compress_level=9)
         digest = hashlib.sha256(path.read_bytes()).hexdigest()

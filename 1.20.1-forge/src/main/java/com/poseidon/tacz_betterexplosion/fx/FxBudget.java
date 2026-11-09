@@ -23,15 +23,23 @@ public final class FxBudget {
     public enum Layer {
         FLASH,
         FIREBALL,
-        RING,
         STEM,
         DUST,
         DEBRIS,
-        SPARKS
+        SPARKS,
+        SHRAPNEL
     }
 
     private static final int FLASH_FIXED = 2;
-    private static final int RING_FIXED = 1;
+    /** Layers that share the post-flash remainder, and their percent of it (sums to 100). */
+    private static final Layer[] SHARED_LAYERS = {
+        Layer.FIREBALL, Layer.STEM, Layer.DUST, Layer.DEBRIS, Layer.SPARKS, Layer.SHRAPNEL
+    };
+    private static final int[] SHARE_PERCENT = {22, 34, 10, 10, 8, 16};
+    /** Order in which the rounding leftover is handed out, one unit each. */
+    private static final Layer[] LEFTOVER_ORDER = {
+        Layer.STEM, Layer.FIREBALL, Layer.SHRAPNEL, Layer.DEBRIS, Layer.SPARKS, Layer.DUST
+    };
     private static final double FAR_LAYER_DISTANCE = 64.0;
     private static final double BEHIND_CAMERA_DISTANCE = 24.0;
 
@@ -103,10 +111,11 @@ public final class FxBudget {
     }
 
     /**
-     * Splits a budget over all layers. FLASH (2) and RING (1) are fixed, clamped to the budget in that priority;
-     * the remainder is shared 30/30/12/14/14 percent over FIREBALL, STEM, DUST, DEBRIS, SPARKS with the
-     * rounding leftover handed out round-robin in the order FIREBALL, STEM, DEBRIS, SPARKS, DUST.
-     * The layers always sum to {@code budget} (all zero when it is not positive) and the map holds every layer.
+     * Splits a budget over all layers. FLASH is fixed at 2, clamped to the budget; the remainder is shared
+     * {@code 22/34/10/10/8/16} percent over FIREBALL, STEM, DUST, DEBRIS, SPARKS, SHRAPNEL (integer floor) and
+     * the rounding leftover (at most 5) is handed out one unit at a time in the order STEM, FIREBALL, SHRAPNEL,
+     * DEBRIS, SPARKS, DUST. The layers always sum to {@code budget} (all zero when it is not positive) and the
+     * map holds every layer.
      */
     public static EnumMap<Layer, Integer> split(int budget) {
         EnumMap<Layer, Integer> out = new EnumMap<>(Layer.class);
@@ -117,26 +126,18 @@ public final class FxBudget {
             return out;
         }
         int flash = Math.min(FLASH_FIXED, budget);
-        int ring = Math.min(RING_FIXED, budget - flash);
-        int remainder = budget - flash - ring;
+        int remainder = budget - flash;
         out.put(Layer.FLASH, flash);
-        out.put(Layer.RING, ring);
 
-        int fireball = remainder * 30 / 100;
-        int stem = remainder * 30 / 100;
-        int dust = remainder * 12 / 100;
-        int debris = remainder * 14 / 100;
-        int sparks = remainder * 14 / 100;
-        int leftover = remainder - (fireball + stem + dust + debris + sparks);
-
-        Layer[] order = {Layer.FIREBALL, Layer.STEM, Layer.DEBRIS, Layer.SPARKS, Layer.DUST};
-        out.put(Layer.FIREBALL, fireball);
-        out.put(Layer.STEM, stem);
-        out.put(Layer.DUST, dust);
-        out.put(Layer.DEBRIS, debris);
-        out.put(Layer.SPARKS, sparks);
+        int shared = 0;
+        for (int i = 0; i < SHARED_LAYERS.length; i++) {
+            int share = remainder * SHARE_PERCENT[i] / 100;
+            out.put(SHARED_LAYERS[i], share);
+            shared += share;
+        }
+        int leftover = remainder - shared;
         for (int i = 0; i < leftover; i++) {
-            Layer layer = order[i % order.length];
+            Layer layer = LEFTOVER_ORDER[i % LEFTOVER_ORDER.length];
             out.put(layer, out.get(layer) + 1);
         }
         return out;

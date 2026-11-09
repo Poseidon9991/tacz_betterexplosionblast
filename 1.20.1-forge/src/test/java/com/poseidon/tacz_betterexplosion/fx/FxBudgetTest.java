@@ -96,41 +96,44 @@ class FxBudgetTest {
     }
 
     @Test
-    void splitFixedLayersPriority() {
-        EnumMap<Layer, Integer> one = FxBudget.split(1);
-        assertEquals(1, one.get(Layer.FLASH));
-        assertEquals(0, one.get(Layer.RING));
+    void splitSmallBudgetsClampFlashFirst() {
+        assertShape(FxBudget.split(1), 1, 0, 0, 0, 0, 0, 0);
+        assertShape(FxBudget.split(2), 2, 0, 0, 0, 0, 0, 0);
+        // remainder 1: every floor is 0, the one leftover unit goes to STEM
+        assertShape(FxBudget.split(3), 2, 0, 1, 0, 0, 0, 0);
+    }
 
-        EnumMap<Layer, Integer> two = FxBudget.split(2);
-        assertEquals(2, two.get(Layer.FLASH));
-        assertEquals(0, two.get(Layer.RING));
-
-        EnumMap<Layer, Integer> three = FxBudget.split(3);
-        assertEquals(2, three.get(Layer.FLASH));
-        assertEquals(1, three.get(Layer.RING));
-        assertEquals(0, three.get(Layer.FIREBALL));
-        assertEquals(0, three.get(Layer.STEM));
-        assertEquals(0, three.get(Layer.DUST));
-        assertEquals(0, three.get(Layer.DEBRIS));
-        assertEquals(0, three.get(Layer.SPARKS));
-
-        for (int budget = 3; budget <= 200; budget++) {
-            EnumMap<Layer, Integer> map = FxBudget.split(budget);
-            assertEquals(2, map.get(Layer.FLASH), "FLASH for budget " + budget);
-            assertEquals(1, map.get(Layer.RING), "RING for budget " + budget);
+    @Test
+    void splitFlashIsTwoOnceBudgetAllowsIt() {
+        for (int budget = 2; budget <= 200; budget++) {
+            assertEquals(2, FxBudget.split(budget).get(Layer.FLASH), "FLASH for budget " + budget);
         }
     }
 
     @Test
     void splitMediumShape() {
-        EnumMap<Layer, Integer> map = FxBudget.split(55);
-        assertEquals(2, map.get(Layer.FLASH));
-        assertEquals(1, map.get(Layer.RING));
-        assertEquals(16, map.get(Layer.FIREBALL));
-        assertEquals(16, map.get(Layer.STEM));
-        assertEquals(6, map.get(Layer.DUST));
-        assertEquals(7, map.get(Layer.DEBRIS));
-        assertEquals(7, map.get(Layer.SPARKS));
+        // remainder 53: floors 11/18/5/5/4/8 (sum 51), leftover 2 to STEM then FIREBALL
+        assertShape(FxBudget.split(55), 2, 12, 19, 5, 5, 4, 8);
+    }
+
+    @Test
+    void splitLeftoverOrderIsStemFireballShrapnelDebrisSparksDust() {
+        // remainder 7: floors FIREBALL 1, STEM 2, SHRAPNEL 1 (sum 4), leftover 3 to STEM, FIREBALL, SHRAPNEL
+        assertShape(FxBudget.split(9), 2, 2, 3, 0, 0, 0, 2);
+        // remainder 5 -> floors FIREBALL 1, STEM 1, DUST 0, DEBRIS 0, SPARKS 0, SHRAPNEL 0 (sum 2), leftover 3
+        // to STEM, FIREBALL, SHRAPNEL
+        assertShape(FxBudget.split(7), 2, 2, 2, 0, 0, 0, 1);
+        // remainder 18 (budget 20): floors 3/6/1/1/1/2 (sum 14), leftover 4 to STEM, FIREBALL, SHRAPNEL, DEBRIS
+        assertShape(FxBudget.split(20), 2, 4, 7, 1, 2, 1, 3);
+    }
+
+    @Test
+    void splitHasNoLayerNamedRing() {
+        for (Layer layer : Layer.values()) {
+            assertFalse(layer.name().equals("RING"), "no ring layer");
+        }
+        assertEquals(7, Layer.values().length);
+        assertEquals(Layer.SHRAPNEL, Layer.values()[Layer.values().length - 1]);
     }
 
     @Test
@@ -140,6 +143,19 @@ class FxBudgetTest {
         for (Layer layer : Layer.values()) {
             assertEquals(0, map.get(layer), layer.toString());
         }
+    }
+
+    private static void assertShape(
+            EnumMap<Layer, Integer> map,
+            int flash, int fireball, int stem, int dust, int debris, int sparks, int shrapnel) {
+        assertEquals(7, map.size());
+        assertEquals(flash, map.get(Layer.FLASH), "FLASH");
+        assertEquals(fireball, map.get(Layer.FIREBALL), "FIREBALL");
+        assertEquals(stem, map.get(Layer.STEM), "STEM");
+        assertEquals(dust, map.get(Layer.DUST), "DUST");
+        assertEquals(debris, map.get(Layer.DEBRIS), "DEBRIS");
+        assertEquals(sparks, map.get(Layer.SPARKS), "SPARKS");
+        assertEquals(shrapnel, map.get(Layer.SHRAPNEL), "SHRAPNEL");
     }
 
     private static int mediumHigh(int liveNow, int maxLive) {

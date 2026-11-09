@@ -21,8 +21,8 @@ public final class FxParticleProviders {
                 ModParticles.SMOKE_PUFF.get(),
                 sprites -> new PuffParticle.Provider(PuffParticle.Variant.SMOKE, sprites));
         event.registerSpriteSet(ModParticles.FLASH.get(), FlashParticle.Provider::new);
-        event.registerSpriteSet(ModParticles.RING.get(), RingParticle.Provider::new);
         event.registerSpriteSet(ModParticles.SPARK.get(), SparkParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.SHRAPNEL.get(), ShrapnelParticle.Provider::new);
         event.registerSpecial(ModParticles.DEBRIS.get(), new DebrisParticle.Provider());
     }
 }

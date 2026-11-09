@@ -23,10 +23,10 @@ public final class ModParticles {
             REGISTER.register("smoke_puff", () -> new SimpleParticleType(false));
     public static final RegistryObject<SimpleParticleType> FLASH =
             REGISTER.register("flash", () -> new SimpleParticleType(false));
-    public static final RegistryObject<SimpleParticleType> RING =
-            REGISTER.register("ring", () -> new SimpleParticleType(false));
     public static final RegistryObject<SimpleParticleType> SPARK =
             REGISTER.register("spark", () -> new SimpleParticleType(false));
+    public static final RegistryObject<SimpleParticleType> SHRAPNEL =
+            REGISTER.register("shrapnel", () -> new SimpleParticleType(false));
 
     /** Block debris chunk; built like vanilla {@code ParticleTypes.BLOCK}. */
     @SuppressWarnings("deprecation")
