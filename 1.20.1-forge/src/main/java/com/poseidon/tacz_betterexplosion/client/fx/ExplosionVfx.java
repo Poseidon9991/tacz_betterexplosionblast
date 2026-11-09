@@ -9,6 +9,7 @@ import java.util.EnumMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleOptions;
@@ -71,28 +72,31 @@ public final class ExplosionVfx {
         double cy = fx.y();
         double cz = fx.z();
         boolean ground = !Double.isNaN(groundY);
+        ParticleEngine engine = Minecraft.getInstance().particleEngine;
 
         int spawned = 0;
-        spawned += spawnFlash(split.get(FxBudget.Layer.FLASH), rand, cx, cy, cz, r, factor);
-        spawned += spawnRing(split.get(FxBudget.Layer.RING), cx, cy, cz, r, factor, ground, groundY);
-        spawned += spawnFireball(split.get(FxBudget.Layer.FIREBALL), rand, cx, cy, cz, r, factor);
-        spawned += spawnStem(split.get(FxBudget.Layer.STEM), rand, cx, cy, cz, r, factor, tier);
+        spawned += spawnFlash(engine, split.get(FxBudget.Layer.FLASH), rand, cx, cy, cz, r, factor);
+        spawned += spawnRing(engine, split.get(FxBudget.Layer.RING), cx, cy, cz, r, factor, ground, groundY);
+        spawned += spawnFireball(engine, split.get(FxBudget.Layer.FIREBALL), rand, cx, cy, cz, r, factor);
+        spawned += spawnStem(engine, split.get(FxBudget.Layer.STEM), rand, cx, cy, cz, r, factor, tier);
         if (ground) {
-            spawned += spawnDust(split.get(FxBudget.Layer.DUST), rand, cx, cz, groundY, r, factor);
-            spawned += spawnDebris(split.get(FxBudget.Layer.DEBRIS), rand, cx, cz, groundY, r, groundState);
+            spawned += spawnDust(engine, split.get(FxBudget.Layer.DUST), rand, cx, cz, groundY, r, factor);
+            spawned += spawnDebris(
+                    engine, split.get(FxBudget.Layer.DEBRIS), rand, cx, cz, groundY, r, groundState);
         }
-        spawned += spawnSparks(split.get(FxBudget.Layer.SPARKS), rand, cx, cy, cz);
+        spawned += spawnSparks(engine, split.get(FxBudget.Layer.SPARKS), rand, cx, cy, cz);
 
         return spawned;
     }
 
     /** Bright centre flashes: jitter {@code 0.2R} per axis, fixed size, no velocity, default lifetime. */
     private static int spawnFlash(
+            ParticleEngine engine,
             int n, RandomSource rand, double cx, double cy, double cz, float r, float factor) {
         int spawned = 0;
         for (int i = 0; i < n; i++) {
             spawned += spawn(
-                    ModParticles.FLASH.get(),
+                    engine, ModParticles.FLASH.get(),
                     cx + (rand.nextDouble() - 0.5) * 0.4 * r,
                     cy + (rand.nextDouble() - 0.5) * 0.4 * r,
                     cz + (rand.nextDouble() - 0.5) * 0.4 * r,
@@ -105,17 +109,20 @@ public final class ExplosionVfx {
 
     /** Ground shockwave ring, or at the centre when no ground was found. No velocity, default lifetime. */
     private static int spawnRing(
+            ParticleEngine engine,
             int n, double cx, double cy, double cz, float r, float factor, boolean ground, double groundY) {
         int spawned = 0;
         double y = ground ? groundY + 0.03 : cy;
         for (int i = 0; i < n; i++) {
-            spawned += spawn(ModParticles.RING.get(), cx, y, cz, 0.0, 0.0, 0.0, 1.5F * r * factor, 0);
+            spawned += spawn(
+                    engine, ModParticles.RING.get(), cx, y, cz, 0.0, 0.0, 0.0, 1.5F * r * factor, 0);
         }
         return spawned;
     }
 
     /** Fireball puffs drifting outward from a shell around the centre. */
     private static int spawnFireball(
+            ParticleEngine engine,
             int n, RandomSource rand, double cx, double cy, double cz, float r, float factor) {
         int spawned = 0;
         for (int i = 0; i < n; i++) {
@@ -123,7 +130,7 @@ public final class ExplosionVfx {
             double dist = rand.nextDouble() * 0.5 * r;
             double speed = 0.05 + rand.nextDouble() * 0.15;
             spawned += spawn(
-                    ModParticles.FIRE_PUFF.get(),
+                    engine, ModParticles.FIRE_PUFF.get(),
                     cx + dir[0] * dist, cy + dir[1] * dist, cz + dir[2] * dist,
                     dir[0] * speed, dir[1] * speed + 0.02, dir[2] * speed,
                     r * (0.5F + rand.nextFloat() * 0.7F) * factor,
@@ -137,6 +144,7 @@ public final class ExplosionVfx {
      * mushroom cap ({@code 0.8R} xz spread, {@code 0.5R} up, 1.4x the scale).
      */
     private static int spawnStem(
+            ParticleEngine engine,
             int n, RandomSource rand, double cx, double cy, double cz, float r, float factor,
             ExplosionTier tier) {
         int spawned = 0;
@@ -159,7 +167,7 @@ public final class ExplosionVfx {
                 scale = r * (0.6F + rand.nextFloat() * 0.5F) * factor;
             }
             spawned += spawn(
-                    ModParticles.SMOKE_PUFF.get(), x, y, z,
+                    engine, ModParticles.SMOKE_PUFF.get(), x, y, z,
                     (rand.nextDouble() - 0.5) * 0.02, 0.02 + rand.nextDouble() * 0.04,
                     (rand.nextDouble() - 0.5) * 0.02,
                     scale, 0);
@@ -169,6 +177,7 @@ public final class ExplosionVfx {
 
     /** Evenly spaced dust ring creeping outward on the ground. */
     private static int spawnDust(
+            ParticleEngine engine,
             int n, RandomSource rand, double cx, double cz, double groundY, float r, float factor) {
         int spawned = 0;
         for (int i = 0; i < n; i++) {
@@ -177,7 +186,7 @@ public final class ExplosionVfx {
             double dz = Math.sin(angle);
             double ring = r * (0.7 + rand.nextDouble() * 0.5) * factor;
             spawned += spawn(
-                    ModParticles.SMOKE_PUFF.get(),
+                    engine, ModParticles.SMOKE_PUFF.get(),
                     cx + dx * ring, groundY + 0.1, cz + dz * ring,
                     dx * 0.02, 0.03 + rand.nextDouble() * 0.03, dz * 0.02,
                     r * 0.25F * (0.8F + rand.nextFloat() * 0.4F),
@@ -186,17 +195,19 @@ public final class ExplosionVfx {
         return spawned;
     }
 
-    /** Ground block chunks tossed up; skipped when the ground state is air. */
+    /** Ground block chunks tossed up; skipped when there are none to spawn or the ground state is air. */
     private static int spawnDebris(
-            int n, RandomSource rand, double cx, double cz, double groundY, float r, BlockState groundState) {
-        if (groundState.isAir()) {
+            ParticleEngine engine,
+            int n, RandomSource rand, double cx, double cz, double groundY, float r,
+            BlockState groundState) {
+        if (n <= 0 || groundState.isAir()) {
             return 0;
         }
         DebrisOption option = new DebrisOption(groundState);
         int spawned = 0;
         for (int i = 0; i < n; i++) {
             spawned += spawn(
-                    option,
+                    engine, option,
                     cx + (rand.nextDouble() - 0.5) * 0.6 * r, groundY + 0.3 + rand.nextDouble() * 0.2,
                     cz + (rand.nextDouble() - 0.5) * 0.6 * r,
                     (rand.nextDouble() - 0.5) * 0.6, 0.25 + rand.nextDouble() * 0.35,
@@ -208,7 +219,8 @@ public final class ExplosionVfx {
     }
 
     /** Fast streaks biased upward from the centre. */
-    private static int spawnSparks(int n, RandomSource rand, double cx, double cy, double cz) {
+    private static int spawnSparks(
+            ParticleEngine engine, int n, RandomSource rand, double cx, double cy, double cz) {
         int spawned = 0;
         for (int i = 0; i < n; i++) {
             double[] dir = unitDir(rand);
@@ -216,7 +228,7 @@ public final class ExplosionVfx {
             double len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
             double speed = (0.4 + rand.nextDouble() * 0.8) / len;
             spawned += spawn(
-                    ModParticles.SPARK.get(), cx, cy, cz,
+                    engine, ModParticles.SPARK.get(), cx, cy, cz,
                     dir[0] * speed, dir[1] * speed, dir[2] * speed,
                     0.6F + rand.nextFloat() * 0.8F,
                     0);
@@ -229,13 +241,13 @@ public final class ExplosionVfx {
      * an optional lifetime override, and returns 1 when the particle exists, else 0 (e.g. air debris).
      */
     private static int spawn(
+            ParticleEngine engine,
             ParticleOptions options,
             double x, double y, double z,
             double xd, double yd, double zd,
             float scale,
             int lifetime) {
-        Particle p =
-                Minecraft.getInstance().particleEngine.createParticle(options, x, y, z, xd, yd, zd);
+        Particle p = engine.createParticle(options, x, y, z, xd, yd, zd);
         if (p == null) {
             return 0;
         }

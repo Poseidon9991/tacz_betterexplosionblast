@@ -68,7 +68,7 @@ public final class ClientFxHandler {
             double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
             boolean behind = false;
-            if (dist > BEHIND_DISTANCE && dist > 1.0E-6) {
+            if (dist > BEHIND_DISTANCE) {
                 Vector3f look = camera.getLookVector();
                 behind = (look.x() * dx + look.y() * dy + look.z() * dz) / dist < 0.0;
             }
@@ -98,12 +98,14 @@ public final class ClientFxHandler {
                 }
             }
 
-            double groundY = ExplosionVfx.findGround(level, x, y, z, radius);
-            BlockState groundState = Double.isNaN(groundY)
-                    ? Blocks.AIR.defaultBlockState()
-                    : level.getBlockState(BlockPos.containing(x, groundY - 0.01, z));
-            int spawned = ExplosionVfx.spawn(fx, level, split, groundY, groundState);
-            FxState.addSpawned(spawned);
+            if (budget > 0) {
+                double groundY = ExplosionVfx.findGround(level, x, y, z, radius);
+                BlockState groundState = Double.isNaN(groundY)
+                        ? Blocks.AIR.defaultBlockState()
+                        : level.getBlockState(BlockPos.containing(x, groundY - 0.01, z));
+                int spawned = ExplosionVfx.spawn(fx, level, split, groundY, groundState);
+                FxState.addSpawned(spawned);
+            }
 
             ExplosionSounds.play(fx, level, dist);
 

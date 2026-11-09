@@ -1,5 +1,6 @@
 package com.poseidon.tacz_betterexplosion.client.fx;
 
+import com.poseidon.tacz_betterexplosion.TaczBetterExplosion;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -95,7 +96,12 @@ public final class FxState {
         if (due != null) {
             SCHEDULED.removeIf(s -> s.remaining <= 0);
             for (Runnable task : due) {
-                task.run();
+                try {
+                    task.run();
+                } catch (Exception | LinkageError e) {
+                    // Log and keep going: one bad task must not drop the rest of the queue.
+                    TaczBetterExplosion.LOGGER.error("Scheduled explosion fx task failed", e);
+                }
             }
         }
     }

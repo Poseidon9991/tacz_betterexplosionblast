@@ -23,15 +23,16 @@ public final class ScreenShake {
     private ScreenShake() {}
 
     /**
-     * Starts a shake of {@code strengthDeg} degrees, or raises the running one. A stronger kick while a shake
-     * is live restarts the decay with new phases; a weaker one is absorbed. Non-positive kicks do nothing.
+     * Starts a shake of {@code strengthDeg} degrees, or raises the running one. A kick while a shake is live
+     * keeps the running age and phases and only takes the max strength (kicks never sum); once the shake
+     * expired a kick restarts the decay with new phases. Non-positive kicks do nothing.
      */
     public static void kick(float strengthDeg) {
         if (!(strengthDeg > 0.0F)) {
             return;
         }
         long now = FxState.clientTicks();
-        if (now - startTick >= DURATION) {
+        if (startTick == Long.MIN_VALUE || now - startTick >= DURATION) {
             startTick = now;
             strength = strengthDeg;
             RandomSource rand = RandomSource.create();
