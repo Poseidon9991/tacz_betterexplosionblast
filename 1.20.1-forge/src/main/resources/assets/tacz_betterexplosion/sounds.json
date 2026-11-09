@@ -1,28 +1,21 @@
 {
   "explosion_close": {
     "sounds": [
-      "minecraft:random/explode1",
-      "minecraft:random/explode2",
-      "minecraft:random/explode3",
-      "minecraft:random/explode4"
+      "tacz_betterexplosion:close_blast1",
+      "tacz_betterexplosion:close_blast2"
     ],
     "subtitle": "subtitles.entity.generic.explode"
   },
   "explosion_mid": {
     "sounds": [
-      { "name": "minecraft:random/explode1", "pitch": 0.7 },
-      { "name": "minecraft:random/explode2", "pitch": 0.7 },
-      { "name": "minecraft:random/explode3", "pitch": 0.7 },
-      { "name": "minecraft:random/explode4", "pitch": 0.7 }
+      "tacz_betterexplosion:mid_blast"
     ],
     "subtitle": "subtitles.entity.generic.explode"
   },
   "explosion_far": {
     "sounds": [
-      "minecraft:ambient/weather/thunder1",
-      "minecraft:ambient/weather/thunder2",
-      "minecraft:ambient/weather/thunder3"
+      "tacz_betterexplosion:far_rumble"
     ],
-    "subtitle": "subtitles.entity.lightning_bolt.thunder"
+    "subtitle": "subtitles.entity.generic.explode"
   }
 }

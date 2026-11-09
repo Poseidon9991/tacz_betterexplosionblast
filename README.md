@@ -2,7 +2,7 @@
 
 Forge 1.20.1 addon for Timeless and Classics Zero (TaCZ) that improves explosions caused by TaCZ guns and projectiles.
 
-v0.3.0: cover-aware explosion damage plus the full client effect — layered particles, distance-banded sound, screen shake and flash, all with performance throttles. 0.3.0 adds an underwater effect variant, TaCZ Tweaks player-damage compatibility and a round of damage-model hardening. 0.3.2 is a visual polish round: a dust shock ring racing outward along the ground, bigger and more numerous shrapnel streaks, and denser billowing smoke.
+v0.3.0: cover-aware explosion damage plus the full client effect — layered particles, distance-banded sound, screen shake and flash, all with performance throttles. 0.3.0 adds an underwater effect variant, TaCZ Tweaks player-damage compatibility and a round of damage-model hardening. 0.3.2 is a visual polish round plus real blast sounds: close/mid/far recorded explosions replace the vanilla ones (CREDITS.md). It includes: a dust shock ring racing outward along the ground, bigger and more numerous shrapnel streaks, and denser billowing smoke.
 
 ## How it works
 
@@ -13,7 +13,7 @@ TaCZ creates every explosive-round explosion through `ExplodeUtil.createExplosio
 3. The blocks are destroyed.
 4. A small packet tells players near the blast to play the effect.
 
-On the client the packet drives a layered effect built from the tier's particle budget: flash (core plus halo, about 6 ticks), fireball, long-lived billowing smoke stem, a dust shock ring racing outward along the ground plus a scattered low dust cloud tinted by the ground block, debris, sparks and fast shrapnel streaks. The sound is layered too — close, mid and far bands picked by distance and delayed by distance to simulate travel time. Screen shake scales with tier and proximity, and a longer white flash fires when the blast is close.
+On the client the packet drives a layered effect built from the tier's particle budget: flash (core plus halo, about 6 ticks), fireball, long-lived billowing smoke stem, a dust shock ring racing outward along the ground plus a scattered low dust cloud tinted by the ground block, debris, sparks and fast shrapnel streaks. The sound is layered too — real blast recordings in close, mid and far bands picked by distance and delayed by distance to simulate travel time (see CREDITS.md for sources and licenses). Screen shake scales with tier and proximity, and a longer white flash fires when the blast is close.
 
 ### Underwater variant
 
