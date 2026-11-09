@@ -32,6 +32,7 @@ build/
 # Game runs
 run/
 run-data/
+logs/
 
 # OS
 Thumbs.db
