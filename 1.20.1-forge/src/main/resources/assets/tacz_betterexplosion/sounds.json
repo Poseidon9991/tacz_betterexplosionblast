@@ -58,5 +58,14 @@
       }
     ],
     "subtitle": "subtitles.tacz_betterexplosion.shrapnel_whiz"
+  },
+  "ear_ring": {
+    "sounds": [
+      {
+        "name": "tacz_betterexplosion:ear_ring",
+        "preload": true
+      }
+    ],
+    "subtitle": "subtitles.tacz_betterexplosion.ear_ring"
   }
 }

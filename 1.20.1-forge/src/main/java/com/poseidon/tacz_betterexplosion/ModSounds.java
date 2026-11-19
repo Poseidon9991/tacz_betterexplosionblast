@@ -25,6 +25,8 @@ public final class ModSounds {
             REGISTER.register("rocket_fly", () -> SoundEvent.createVariableRangeEvent(id("rocket_fly")));
     public static final RegistryObject<SoundEvent> SHRAPNEL_WHIZ =
             REGISTER.register("shrapnel_whiz", () -> SoundEvent.createVariableRangeEvent(id("shrapnel_whiz")));
+    public static final RegistryObject<SoundEvent> EAR_RING =
+            REGISTER.register("ear_ring", () -> SoundEvent.createVariableRangeEvent(id("ear_ring")));
 
     private ModSounds() {}
 

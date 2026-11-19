@@ -4,6 +4,7 @@ import com.poseidon.tacz_betterexplosion.TaczBetterExplosion;
 import com.poseidon.tacz_betterexplosion.client.fx.FxState;
 import com.poseidon.tacz_betterexplosion.client.fx.ScreenFlash;
 import com.poseidon.tacz_betterexplosion.client.fx.ScreenShake;
+import com.poseidon.tacz_betterexplosion.client.sound.EarMuffle;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -27,6 +28,7 @@ public final class ClientEvents {
         if (event.phase == TickEvent.Phase.END) {
             FxState.tick();
             ClientRocketHandler.tick();
+            EarMuffle.tick();
         }
     }
 
@@ -67,5 +69,6 @@ public final class ClientEvents {
         ScreenShake.clear();
         ScreenFlash.clear();
         ClientRocketHandler.clear();
+        EarMuffle.reset();
     }
 }

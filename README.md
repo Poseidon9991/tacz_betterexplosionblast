@@ -11,7 +11,7 @@ Explosions:
 - TaCZ damage stops at the explosion radius. This mod reaches out to `reachMultiplier` times the radius with distance falloff, and reduces damage through cover instead of treating line-of-sight as all or nothing.
 - TaCZ plays one vanilla explosion effect per blast. This mod builds a layered effect per explosion type (standard, grenade, rocket, heavy) and per hit surface (floor, wall, ceiling, air), plus an underwater variant.
 - TaCZ culls detonations beyond 64 blocks entirely. This mod keeps particles visible to 384 blocks by tier and shows a Far LOD flash and smoke pillar out to 512 blocks.
-- Vanilla explosion sounds are replaced by real recorded blasts in close/mid/far bands, delayed by distance to simulate travel time, with indoor reverb tails in enclosed rooms or caves and near-miss shrapnel whiz sounds.
+- Vanilla explosion sounds are replaced by real recorded blasts in close/mid/far bands, delayed by distance to simulate travel time, with indoor reverb tails in enclosed rooms or caves, near-miss shrapnel whiz sounds, and a short ear-muffle with ringing when a blast detonates close to you.
 - Screen shake and a close-range white flash, both configurable.
 
 Rockets and RPGs, where base TaCZ has the most gaps:
@@ -103,6 +103,8 @@ Forge generates two files. The server file lives in each world's `serverconfig` 
 | `shakeStrength` | 1.0 | 0.0–2.0 | Scales the shake strength |
 | `screenFlash` | true | — | White flash for explosions close by |
 | `soundVolume` | 1.0 | 0.0–2.0 | Volume multiplier for explosion and rocket flight sounds |
+| `earMuffle` | true | true/false | Brief deafening and ear ringing when a blast goes off close to you |
+| `earMuffleDuck` | 0.12 | 0.0–1.0 | How deep the ear muffle ducks other sounds (0 = silence) |
 
 `quality = "MEDIUM"` in `config/tacz_betterexplosion-client.toml` reloads on file save; no restart needed.
 

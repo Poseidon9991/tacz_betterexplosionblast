@@ -62,6 +62,14 @@ public final class ClientConfig {
             .comment("Master volume multiplier for this mod's explosion and rocket flight sounds (0 = mute, 1 = default, up to 2).")
             .defineInRange("soundVolume", ExplosionDefaults.SOUND_VOLUME, 0.0, 2.0);
 
+    public static final ForgeConfigSpec.BooleanValue EAR_MUFFLE = BUILDER
+            .comment("Temporarily deafen (duck all other sounds and play an ear ring) when a blast detonates close by.")
+            .define("earMuffle", ExplosionDefaults.EAR_MUFFLE);
+
+    public static final ForgeConfigSpec.DoubleValue EAR_MUFFLE_DUCK = BUILDER
+            .comment("How deep the ear muffle ducks other sounds (0 = silence, 1 = no ducking).")
+            .defineInRange("earMuffleDuck", ExplosionDefaults.EAR_MUFFLE_DUCK, 0.0, 1.0);
+
     public static final ForgeConfigSpec SPEC = BUILDER.build();
 
     public static Quality quality() {
@@ -110,5 +118,13 @@ public final class ClientConfig {
 
     public static double soundVolume() {
         return !SPEC.isLoaded() ? ExplosionDefaults.SOUND_VOLUME : SOUND_VOLUME.get();
+    }
+
+    public static boolean earMuffle() {
+        return !SPEC.isLoaded() ? ExplosionDefaults.EAR_MUFFLE : EAR_MUFFLE.get();
+    }
+
+    public static double earMuffleDuck() {
+        return !SPEC.isLoaded() ? ExplosionDefaults.EAR_MUFFLE_DUCK : EAR_MUFFLE_DUCK.get();
     }
 }

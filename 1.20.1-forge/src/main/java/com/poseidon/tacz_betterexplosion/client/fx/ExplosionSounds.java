@@ -1,6 +1,7 @@
 package com.poseidon.tacz_betterexplosion.client.fx;
 
 import com.poseidon.tacz_betterexplosion.ModSounds;
+import com.poseidon.tacz_betterexplosion.client.sound.EarMuffle;
 import com.poseidon.tacz_betterexplosion.config.ClientConfig;
 import com.poseidon.tacz_betterexplosion.fx.ExplosionFx;
 import com.poseidon.tacz_betterexplosion.fx.ExplosionTier;
@@ -107,6 +108,14 @@ public final class ExplosionSounds {
             if (whizGain >= 0.04F) {
                 maybePlayShrapnelWhiz(fx, level, whizGain, rand);
             }
+        }
+
+        if (ClientConfig.earMuffle() && distance <= fx.radius() * 1.5 + 2.0) {
+            int muffleTicks = 35 + ordinal * 15;
+            EarMuffle.start(muffleTicks, (float) ClientConfig.earMuffleDuck());
+            float ringPitch = clampPitch(0.95F + rand.nextFloat() * 0.1F);
+            scheduleAt(0.0, 0.0, 0.0, ModSounds.EAR_RING.get(),
+                    0.9F * (float) configVol, ringPitch, 0, true, rand.nextLong());
         }
     }
 

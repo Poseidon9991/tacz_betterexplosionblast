@@ -29,6 +29,8 @@ public final class ExplosionDefaults {
     public static final boolean ROCKET_SMOKE_TRAIL = true;
     public static final boolean ROCKET_FLIGHT_SOUND = true;
     public static final double SOUND_VOLUME = 1.0;
+    public static final boolean EAR_MUFFLE = true;
+    public static final double EAR_MUFFLE_DUCK = 0.12;
 
     private ExplosionDefaults() {
     }
