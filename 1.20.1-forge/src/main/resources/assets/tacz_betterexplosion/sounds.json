@@ -1,21 +1,62 @@
 {
   "explosion_close": {
     "sounds": [
-      "tacz_betterexplosion:close_blast1",
-      "tacz_betterexplosion:close_blast2"
+      {
+        "name": "tacz_betterexplosion:close_blast1",
+        "attenuation_distance": 160,
+        "preload": true
+      },
+      {
+        "name": "tacz_betterexplosion:close_blast2",
+        "attenuation_distance": 160,
+        "preload": true
+      }
     ],
-    "subtitle": "subtitles.entity.generic.explode"
+    "subtitle": "subtitles.tacz_betterexplosion.explosion"
   },
   "explosion_mid": {
     "sounds": [
-      "tacz_betterexplosion:mid_blast"
+      {
+        "name": "tacz_betterexplosion:mid_blast",
+        "attenuation_distance": 320,
+        "preload": true
+      }
     ],
-    "subtitle": "subtitles.entity.generic.explode"
+    "subtitle": "subtitles.tacz_betterexplosion.explosion"
   },
   "explosion_far": {
     "sounds": [
-      "tacz_betterexplosion:far_rumble"
+      {
+        "name": "tacz_betterexplosion:far_rumble",
+        "attenuation_distance": 512,
+        "preload": true
+      }
     ],
-    "subtitle": "subtitles.entity.generic.explode"
+    "subtitle": "subtitles.tacz_betterexplosion.explosion_distant"
+  },
+  "rocket_fly": {
+    "sounds": [
+      {
+        "name": "tacz_betterexplosion:rocket_fly",
+        "attenuation_distance": 256,
+        "preload": true
+      }
+    ],
+    "subtitle": "subtitles.tacz_betterexplosion.rocket_fly"
+  },
+  "shrapnel_whiz": {
+    "sounds": [
+      {
+        "name": "tacz_betterexplosion:shrapnel_whiz1",
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "tacz_betterexplosion:shrapnel_whiz2",
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ],
+    "subtitle": "subtitles.tacz_betterexplosion.shrapnel_whiz"
   }
 }

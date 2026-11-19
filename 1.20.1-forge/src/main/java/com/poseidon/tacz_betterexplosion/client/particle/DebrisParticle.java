@@ -27,13 +27,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public final class DebrisParticle extends TerrainParticle {
 
     private static final int GROUND_SCAN_BLOCKS = 8;
-    private static final int MIN_LIFETIME = 20;
-    private static final int LIFETIME_SPREAD = 26;
+    private static final int MIN_LIFETIME = 28;
+    private static final int LIFETIME_SPREAD = 32;
     private static final double GRAVITY = 0.04;
     private static final double DRAG = 0.98;
-    private static final float MIN_SIZE_FACTOR = 0.12F;
-    private static final float SIZE_FACTOR_SPREAD = 0.10F;
-    private static final float MAX_SPIN = 0.15F;
+    private static final float MIN_SIZE_FACTOR = 0.16F;
+    private static final float SIZE_FACTOR_SPREAD = 0.14F;
+    private static final float MAX_SPIN = 0.18F;
 
     private final double groundY;
     private final float sizeFactor;

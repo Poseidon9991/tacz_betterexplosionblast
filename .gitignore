@@ -2,3 +2,14 @@
 Thumbs.db
 .DS_Store
 desktop.ini
+
+# Agent/tooling dirs
+.superpowers/
+
+# Dev screenshots and scratch files
+.smoke_sheet.png
+
+# IDE (module-level .gitignore covers the rest)
+.idea/
+.vscode/
+1.20.1-forge/tools/gen_textures.py

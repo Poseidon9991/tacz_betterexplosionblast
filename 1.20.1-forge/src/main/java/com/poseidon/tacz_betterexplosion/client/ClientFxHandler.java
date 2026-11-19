@@ -44,7 +44,9 @@ public final class ClientFxHandler {
     private ClientFxHandler() {
     }
 
-    public static void handle(ExplosionFx fx) {
+    public static void handle(ExplosionFx packet) {
+        // Each type has its own visual size: the packet radius is scaled once and used for everything below.
+        ExplosionFx fx = packet.withRadius(packet.radius() * (float) packet.type().look.radiusScale());
         long startNanos = System.nanoTime();
         try {
             Minecraft mc = Minecraft.getInstance();
@@ -107,15 +109,16 @@ public final class ClientFxHandler {
                 BlockState groundState = Double.isNaN(groundY)
                         ? Blocks.AIR.defaultBlockState()
                         : level.getBlockState(BlockPos.containing(x, groundY - 0.01, z));
+                BlockState surfaceState = surfaceBlock(level, fx);
                 int spawned = ExplosionVfx.spawn(
-                        fx, level, split, groundY, groundState, underwater, ClientConfig.quality());
+                        fx, level, split, groundY, groundState, surfaceState, underwater, ClientConfig.quality());
                 FxState.addSpawned(spawned);
             }
 
             ExplosionSounds.play(fx, level, dist, underwater);
 
             if (ClientConfig.screenShake()) {
-                float strength = (float) (TIER_SHAKE[tier.ordinal()]
+                float strength = (float) (TIER_SHAKE[tier.ordinal()] * fx.type().look.shake()
                         * Math.max(0.0, 1.0 - dist / tier.particleRange())
                         * ClientConfig.shakeStrength());
                 if (underwater) {
@@ -134,5 +137,26 @@ public final class ClientFxHandler {
         } finally {
             FxState.lastHandlerNanos = System.nanoTime() - startNanos;
         }
+    }
+
+    /**
+     * The block the blast hit: the first non-air block within three blocks behind the hit point, against the face
+     * normal. Air when the blast is in open air or the block is already gone (the client has usually applied the
+     * block destruction by the time the effect packet arrives).
+     */
+    private static BlockState surfaceBlock(ClientLevel level, ExplosionFx fx) {
+        net.minecraft.core.Direction normal = ExplosionVfx.surfaceDirection(fx.surface());
+        if (normal == null) {
+            return Blocks.AIR.defaultBlockState();
+        }
+        for (int i = 0; i < 4; i++) {
+            double d = 0.1 + i;
+            BlockState state = level.getBlockState(BlockPos.containing(
+                    fx.x() - normal.getStepX() * d, fx.y() - normal.getStepY() * d, fx.z() - normal.getStepZ() * d));
+            if (!state.isAir()) {
+                return state;
+            }
+        }
+        return Blocks.AIR.defaultBlockState();
     }
 }

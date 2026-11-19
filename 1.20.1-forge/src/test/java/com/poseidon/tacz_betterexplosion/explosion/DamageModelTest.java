@@ -24,9 +24,9 @@ class DamageModelTest {
 
     @Test
     void matchesSpecTable() {
-        assertEquals(21.6, damageAt(2, 1, P), 0.01);
-        assertEquals(11.25, damageAt(5, 1, P), 0.01);
-        assertEquals(3.6, damageAt(8, 1, P), 0.01);
+        assertEquals(28.8, damageAt(2, 1, P), 0.01);
+        assertEquals(22.5, damageAt(5, 1, P), 0.01);
+        assertEquals(10.8, damageAt(8, 1, P), 0.01);
         assertEquals(0.0, damageAt(10, 1, P), 0.0);
         assertEquals(0.0, damageAt(12, 1, P), 0.0);
     }
@@ -44,7 +44,7 @@ class DamageModelTest {
 
     @Test
     void coverFloorKeepsDamage() {
-        assertEquals(3.6, damageAt(2, 0, P), 0.01);
+        assertEquals(10.8, damageAt(2, 0, P), 0.01);
         DamageModel.Params noFloor = new DamageModel.Params(2.0, 0.0, 1.0, 1.0);
         assertEquals(0.0, damageAt(2, 0, noFloor), 0.0);
     }

@@ -26,6 +26,7 @@ public final class ClientEvents {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
             FxState.tick();
+            ClientRocketHandler.tick();
         }
     }
 
@@ -65,5 +66,6 @@ public final class ClientEvents {
         FxState.reset();
         ScreenShake.clear();
         ScreenFlash.clear();
+        ClientRocketHandler.clear();
     }
 }

@@ -7,8 +7,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 /**
- * Distance-banded explosion sounds of the mod. Registered on both sides (the registry has to match);
- * playback happens client-side in {@code client.fx.ExplosionSounds}. Common code, so no client classes here.
+ * Distance-banded explosion, shrapnel, and rocket flight sounds of the mod. Registered on both sides
+ * (the registry has to match); playback happens client-side. Common code, so no client classes here.
  */
 public final class ModSounds {
 
@@ -21,6 +21,10 @@ public final class ModSounds {
             REGISTER.register("explosion_mid", () -> SoundEvent.createVariableRangeEvent(id("explosion_mid")));
     public static final RegistryObject<SoundEvent> EXPLOSION_FAR =
             REGISTER.register("explosion_far", () -> SoundEvent.createVariableRangeEvent(id("explosion_far")));
+    public static final RegistryObject<SoundEvent> ROCKET_FLY =
+            REGISTER.register("rocket_fly", () -> SoundEvent.createVariableRangeEvent(id("rocket_fly")));
+    public static final RegistryObject<SoundEvent> SHRAPNEL_WHIZ =
+            REGISTER.register("shrapnel_whiz", () -> SoundEvent.createVariableRangeEvent(id("shrapnel_whiz")));
 
     private ModSounds() {}
 

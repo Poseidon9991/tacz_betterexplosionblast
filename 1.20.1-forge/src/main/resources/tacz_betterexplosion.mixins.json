@@ -5,7 +5,10 @@
     "refmap": "tacz_betterexplosion.refmap.json",
     "minVersion": "0.8",
     "mixins": [
-        "ExplodeUtilMixin"
+        "ExplodeUtilMixin",
+        "EntityMixin",
+        "EntityTypeMixin",
+        "EntityKineticBulletMixin"
     ],
     "injectors": {
         "defaultRequire": 1

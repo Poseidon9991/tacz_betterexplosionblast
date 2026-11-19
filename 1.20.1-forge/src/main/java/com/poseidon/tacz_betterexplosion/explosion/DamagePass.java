@@ -2,6 +2,7 @@ package com.poseidon.tacz_betterexplosion.explosion;
 
 import com.poseidon.tacz_betterexplosion.compat.TweaksCompat;
 import com.poseidon.tacz_betterexplosion.config.ServerConfig;
+import com.poseidon.tacz_betterexplosion.fx.ExplosionType;
 import com.tacz.guns.config.common.AmmoConfig;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,11 +31,14 @@ public final class DamagePass {
     private DamagePass() {
     }
 
-    public static void run(ExplosionContext ctx) {
+    public static void run(ExplosionContext ctx, ExplosionType type) {
         ServerLevel level = ctx.level();
         Vec3 pos = ctx.pos();
-        DamageModel.Params params = new DamageModel.Params(ServerConfig.reachMultiplier(),
-                ServerConfig.coverFloor(), ServerConfig.damageMultiplier(), ServerConfig.knockbackMultiplier());
+        ExplosionType.Gameplay g = type.gameplay;
+        DamageModel.Params params = new DamageModel.Params(ServerConfig.reachMultiplier() * g.reachScale(),
+                Math.max(0.0, Math.min(1.0, ServerConfig.coverFloor() + g.coverFloorDelta())),
+                ServerConfig.damageMultiplier() * g.damageScale(),
+                ServerConfig.knockbackMultiplier() * g.knockbackScale());
         double reach = DamageModel.reach(ctx.radius(), params.reachMultiplier());
         if (reach <= 0.0) {
             return;
@@ -55,7 +59,7 @@ public final class DamagePass {
         for (Targets.Ranked<Entity> target : targets) {
             Entity entity = target.item();
             double distance = target.distance();
-            double seen = Explosion.getSeenPercent(pos, entity);
+            double seen = seenPercent(pos, entity);
             double p = DamageModel.blastFactor(ctx.radius(), distance, seen, params);
             if (p <= 0.0) {
                 continue;
@@ -77,6 +81,25 @@ public final class DamagePass {
                 applyKnockback(ctx, params, entity, p);
             }
         }
+    }
+
+    /**
+     * Exposure of the entity. TaCZ reports impacts exactly on a block face, so rays from the raw centre
+     * often start inside the block and read as fully covered. Also sample from points nudged out of the
+     * surface (up, and toward the target) and keep the best, so nearby mobs are not shielded by the
+     * block the bullet hit.
+     */
+    private static double seenPercent(Vec3 pos, Entity entity) {
+        double seen = Explosion.getSeenPercent(pos, entity);
+        if (seen >= 1.0) {
+            return seen;
+        }
+        seen = Math.max(seen, Explosion.getSeenPercent(pos.add(0.0, 0.6, 0.0), entity));
+        Vec3 toward = entity.getBoundingBox().getCenter().subtract(pos);
+        if (toward.lengthSqr() > 1.0e-6) {
+            seen = Math.max(seen, Explosion.getSeenPercent(pos.add(toward.normalize().scale(0.6)), entity));
+        }
+        return seen;
     }
 
     /** Distance from the centre to the closest point of the entity's bounding box. */

@@ -9,7 +9,7 @@ package com.poseidon.tacz_betterexplosion.explosion;
  * reach  = radius * reachMultiplier
  * cover  = coverFloor + (1 - coverFloor) * seen
  * p      = (1 - distance / reach) * cover          (0 when distance &gt;= reach)
- * damage = D * damageMultiplier * (p^2 + p) / 2
+ * damage = D * damageMultiplier * (2p - p^2)   (ease-out: strong near, soft tail)
  * </pre>
  */
 public final class DamageModel {
@@ -61,7 +61,7 @@ public final class DamageModel {
             return 0.0;
         }
         double factor = clamp01(blastFactor);
-        return finiteOrZero(damage * nonNegative(p.damageMultiplier()) * (factor * factor + factor) / 2.0);
+        return finiteOrZero(damage * nonNegative(p.damageMultiplier()) * (2.0 * factor - factor * factor));
     }
 
     /** Knockback magnitude for a blast factor (after any enchantment dampening by the caller). */

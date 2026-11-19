@@ -2,11 +2,11 @@ package com.poseidon.tacz_betterexplosion.fx;
 
 /** Explosion size class: effect budget and visibility ranges, chosen by radius. */
 public enum ExplosionTier {
-    MINI(2.0f, 14, 64, 48),
-    SMALL(3.5f, 34, 96, 64),
-    MEDIUM(6.0f, 66, 160, 96),
-    LARGE(10.0f, 108, 224, 144),
-    HUGE(Float.POSITIVE_INFINITY, 180, 256, 192);
+    MINI(2.0f, 14, 96, 64),
+    SMALL(3.5f, 34, 192, 128),
+    MEDIUM(6.0f, 66, 288, 192),
+    LARGE(10.0f, 108, 384, 256),
+    HUGE(Float.POSITIVE_INFINITY, 180, 512, 384);
 
     private final float radiusLimit;
     private final int budget;

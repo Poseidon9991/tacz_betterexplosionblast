@@ -1,7 +1,11 @@
 package com.poseidon.tacz_betterexplosion.explosion;
 
 import com.poseidon.tacz_betterexplosion.TaczBetterExplosion;
+import com.poseidon.tacz_betterexplosion.config.ServerConfig;
 import com.poseidon.tacz_betterexplosion.fx.ExplosionFx;
+import com.poseidon.tacz_betterexplosion.fx.ExplosionType;
+import com.tacz.guns.entity.EntityKineticBullet;
+import net.minecraft.core.Direction;
 import com.poseidon.tacz_betterexplosion.net.Network;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
@@ -33,6 +37,16 @@ public final class BetterExplosions {
     }
 
     public static void detonate(ExplosionContext ctx) {
+        // Type and hit surface are read first: the blocks are gone by the time the effects packet is built.
+        ExplosionType type = ExplosionType.STANDARD;
+        int surface = 0;
+        try {
+            type = classify(ctx);
+            surface = surfaceCode(ctx.level(), ctx.pos(), ctx.exploder().getDeltaMovement());
+        } catch (Exception | LinkageError e) {
+            TaczBetterExplosion.LOGGER.error("Explosion type/surface detection failed at {}", ctx.pos(), e);
+        }
+
         // 1. Start event + explode(). A cancelled Start, or a failure here, ends the explosion.
         Optional<Explosion> started;
         try {
@@ -47,7 +61,7 @@ public final class BetterExplosions {
 
         // 2. Entity damage, before the blocks are destroyed and the drops spawn.
         try {
-            DamagePass.run(ctx);
+            DamagePass.run(ctx, type);
         } catch (Exception | LinkageError e) {
             TaczBetterExplosion.LOGGER.error("Damage pass failed for explosion at {}", ctx.pos(), e);
         }
@@ -63,12 +77,49 @@ public final class BetterExplosions {
         try {
             Vec3 pos = ctx.pos();
             boolean underwater = isUnderwater(ctx.level(), pos);
-            byte flags = underwater ? ExplosionFx.FLAG_UNDERWATER : 0;
+            byte flags = ExplosionFx.pack(underwater, type, surface);
             Network.sendFx(ctx.level(),
                     new ExplosionFx(pos.x, pos.y, pos.z, ctx.radius(), flags, ctx.level().random.nextInt()));
         } catch (Exception | LinkageError e) {
             TaczBetterExplosion.LOGGER.error("Sending explosion fx failed for explosion at {}", ctx.pos(), e);
         }
+    }
+
+    private static ExplosionType classify(ExplosionContext ctx) {
+        if (ctx.exploder() instanceof EntityKineticBullet bullet && bullet.getAmmoId() != null) {
+            return ExplosionType.classify(bullet.getAmmoId().toString(), ServerConfig.ammoTypes());
+        }
+        return ExplosionType.STANDARD;
+    }
+
+    /** Distance, in blocks, of the surface probes. */
+    private static final double SURFACE_PROBE = 0.05;
+
+    /**
+     * The surface the blast hit, as {@code 1 + normal.get3DDataValue()} (0 = open air). TaCZ reports the exact hit
+     * point on a block face, so each of the six directions is probed a hair away from it: a solid block on one
+     * side means the face normal points the other way. With several candidates (edges and corners) the face the
+     * bullet was flying into wins; with no usable motion floors win over walls over ceilings.
+     */
+    static int surfaceCode(Level level, Vec3 pos, Vec3 motion) {
+        Direction best = null;
+        double bestScore = Double.POSITIVE_INFINITY;
+        for (Direction probe : Direction.values()) {
+            BlockPos p = BlockPos.containing(pos.add(
+                    probe.getStepX() * SURFACE_PROBE, probe.getStepY() * SURFACE_PROBE, probe.getStepZ() * SURFACE_PROBE));
+            if (level.getBlockState(p).getCollisionShape(level, p).isEmpty()) {
+                continue;
+            }
+            Direction normal = probe.getOpposite();
+            double score = motion.lengthSqr() > 1.0e-4
+                    ? motion.normalize().dot(new Vec3(normal.getStepX(), normal.getStepY(), normal.getStepZ()))
+                    : (normal == Direction.UP ? -2.0 : normal == Direction.DOWN ? 2.0 : 0.0);
+            if (score < bestScore) {
+                bestScore = score;
+                best = normal;
+            }
+        }
+        return best == null ? 0 : best.get3DDataValue() + 1;
     }
 
     /**

@@ -49,8 +49,11 @@ public final class Network {
 
     /** Sends {@code fx} to the players near it in {@code level}. */
     public static void sendFx(ServerLevel level, ExplosionFx fx) {
+        int tierRange = ExplosionTier.fromRadius(fx.radius()).packetRange();
+        int minTypeRange = (fx.type() == com.poseidon.tacz_betterexplosion.fx.ExplosionType.ROCKET
+                || fx.type() == com.poseidon.tacz_betterexplosion.fx.ExplosionType.HEAVY) ? 384 : 128;
         int range = Math.max(AmmoConfig.EXPLOSIVE_AMMO_VISIBLE_DISTANCE.get(),
-                ExplosionTier.fromRadius(fx.radius()).packetRange());
+                Math.max(tierRange, minTypeRange));
         CHANNEL.send(PacketDistributor.NEAR.with(
                 () -> new PacketDistributor.TargetPoint(fx.x(), fx.y(), fx.z(), range, level.dimension())), fx);
     }

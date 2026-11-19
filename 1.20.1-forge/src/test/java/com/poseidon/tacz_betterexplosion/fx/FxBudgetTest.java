@@ -58,8 +58,11 @@ class FxBudgetTest {
 
     @Test
     void lodBeyondRangeIsZero() {
-        assertEquals(1.0, FxBudget.lodFactor(96.0, ExplosionTier.MEDIUM, false), EPS);
-        assertEquals(0.0, FxBudget.lodFactor(96.01, ExplosionTier.MEDIUM, false), EPS);
+        assertEquals(1.0, FxBudget.lodFactor(192.0, ExplosionTier.MEDIUM, false), EPS);
+        assertEquals(0.25, FxBudget.lodFactor(192.01, ExplosionTier.MEDIUM, false), EPS);
+        assertEquals(0.25, FxBudget.lodFactor(288.0, ExplosionTier.MEDIUM, false), EPS);
+        assertEquals(0.0, FxBudget.lodFactor(288.01, ExplosionTier.MEDIUM, false), EPS);
+        assertEquals(0.0, FxBudget.lodFactor(200.0, ExplosionTier.MEDIUM, true), EPS);
         assertEquals(0.0, FxBudget.lodFactor(Double.NaN, ExplosionTier.MEDIUM, false), EPS);
     }
 
@@ -144,6 +147,27 @@ class FxBudgetTest {
         assertEquals(Layer.values().length, map.size());
         for (Layer layer : Layer.values()) {
             assertEquals(0, map.get(layer), layer.toString());
+        }
+    }
+
+    @Test
+    void mushroomCapUsesExistingStemBudgetForSmallAndLarger() {
+        assertEquals(0, FxBudget.capSmokeCount(ExplosionTier.MINI, 12));
+        assertEquals(0, FxBudget.capSmokeCount(ExplosionTier.SMALL, 5));
+        assertEquals(4, FxBudget.capSmokeCount(ExplosionTier.SMALL, 12));
+        assertEquals(8, FxBudget.capSmokeCount(ExplosionTier.MEDIUM, 24));
+    }
+
+    @Test
+    void dustRingUsesExistingBudgetAndNeverSpawnsUnderZero() {
+        assertEquals(0, FxBudget.ringDustCount(-1));
+        assertEquals(0, FxBudget.ringDustCount(0));
+        assertEquals(2, FxBudget.ringDustCount(2));
+        assertEquals(8, FxBudget.ringDustCount(8));
+        assertEquals(9, FxBudget.ringDustCount(10));
+        assertEquals(24, FxBudget.ringDustCount(28));
+        for (int dust = 0; dust <= 180; dust++) {
+            assertTrue(FxBudget.ringDustCount(dust) <= dust);
         }
     }
 

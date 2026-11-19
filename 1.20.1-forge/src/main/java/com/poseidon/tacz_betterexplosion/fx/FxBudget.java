@@ -67,9 +67,18 @@ public final class FxBudget {
         return 1.0;
     }
 
-    /** Distance factor: 0 beyond the tier's particle range (or NaN), 0.4 far behind the camera, else 1. */
+    /**
+     * Distance factor: 0 beyond the tier's packet range (or NaN), 0.25 between particle range and packet range
+     * (far LOD for flash and smoke column), 0.4 far behind the camera, else 1.
+     */
     public static double lodFactor(double distance, ExplosionTier tier, boolean behindCamera) {
-        if (Double.isNaN(distance) || distance > tier.particleRange()) {
+        if (Double.isNaN(distance)) {
+            return 0.0;
+        }
+        if (distance > tier.particleRange()) {
+            if (distance <= tier.packetRange() && !behindCamera) {
+                return 0.25;
+            }
             return 0.0;
         }
         if (behindCamera && distance > BEHIND_CAMERA_DISTANCE) {
@@ -141,5 +150,21 @@ public final class FxBudget {
             out.put(layer, out.get(layer) + 1);
         }
         return out;
+    }
+
+    /**
+     * Stem puffs that form the mushroom cap: one third of the stem budget for every tier but MINI,
+     * and only once the stem has at least 6 puffs (smaller stems stay a plain column).
+     */
+    public static int capSmokeCount(ExplosionTier tier, int stem) {
+        return tier != ExplosionTier.MINI && stem >= 6 ? stem / 3 : 0;
+    }
+
+    /**
+     * Puffs of the DUST budget that spawn as the ground shock ring: all of a small budget (at most 8),
+     * otherwise all but one sixth of it, so the scattered cloud keeps a share. Never negative.
+     */
+    public static int ringDustCount(int dust) {
+        return dust <= 8 ? Math.max(0, dust) : dust - dust / 6;
     }
 }

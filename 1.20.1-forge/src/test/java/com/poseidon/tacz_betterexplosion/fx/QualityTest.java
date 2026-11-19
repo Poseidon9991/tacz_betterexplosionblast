@@ -39,12 +39,12 @@ class QualityTest {
     }
 
     @Test
-    void mediumAddsShrapnel() {
+    void mediumAddsDebrisAndShrapnel() {
         assertTrue(Quality.MEDIUM.allows(Layer.FLASH));
         assertTrue(Quality.MEDIUM.allows(Layer.FIREBALL));
         assertTrue(Quality.MEDIUM.allows(Layer.STEM));
         assertTrue(Quality.MEDIUM.allows(Layer.DUST));
-        assertFalse(Quality.MEDIUM.allows(Layer.DEBRIS));
+        assertTrue(Quality.MEDIUM.allows(Layer.DEBRIS));
         assertFalse(Quality.MEDIUM.allows(Layer.SPARKS));
         assertTrue(Quality.MEDIUM.allows(Layer.SHRAPNEL));
     }
